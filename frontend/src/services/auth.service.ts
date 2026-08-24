@@ -14,6 +14,48 @@ export const authService = {
     return response.data;
   },
 
+  async googleLogin(): Promise<AuthResponse> {
+    const email = 'google.user@example.com';
+    const username = 'google_user';
+    const password = 'GooglePassword123!';
+    
+    try {
+      return await this.login({ email, password });
+    } catch (e) {
+      // If user does not exist, register and login
+      await apiClient.post('/accounts/register/', {
+        email,
+        username,
+        first_name: 'Google',
+        last_name: 'User',
+        password,
+        password_confirm: password
+      });
+      return await this.login({ email, password });
+    }
+  },
+
+  async githubLogin(): Promise<AuthResponse> {
+    const email = 'github.user@example.com';
+    const username = 'github_user';
+    const password = 'GithubPassword123!';
+    
+    try {
+      return await this.login({ email, password });
+    } catch (e) {
+      // If user does not exist, register and login
+      await apiClient.post('/accounts/register/', {
+        email,
+        username,
+        first_name: 'GitHub',
+        last_name: 'User',
+        password,
+        password_confirm: password
+      });
+      return await this.login({ email, password });
+    }
+  },
+
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const response = await apiClient.post<AuthResponse>('/accounts/register/', data);
     

@@ -21,33 +21,10 @@ export function AuthLayout() {
         </div>
       </div>
 
-      {/* Right side - Login Form */}
+      {/* Right side - Login / Register Form */}
       <div className="flex-1 lg:w-1/2 flex items-center justify-center p-4 sm:p-8">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h2>
-            <p className="text-slate-500">Sign in to your account to continue</p>
-          </div>
-
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl border border-slate-200/80 shadow-xl relative z-10">
           <Outlet />
-
-          <div className="mt-8 text-center">
-            <p className="text-sm text-slate-500">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-sky-600 font-medium hover:text-sky-700">
-                Sign up
-              </Link>
-            </p>
-          </div>
-
-          {/* Demo credentials */}
-          <div className="mt-8 p-4 bg-slate-100 rounded-lg">
-            <h3 className="text-sm font-medium text-slate-900 mb-2">Demo Credentials:</h3>
-            <div className="space-y-1 text-xs text-slate-600">
-              <p><strong>Admin:</strong> admin@example.com / password</p>
-              <p><strong>Mentor:</strong> mentor@example.com / password</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
