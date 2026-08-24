@@ -7,7 +7,7 @@ export const templatesService = {
     return response.data;
   },
 
-  async getById(id: number): Promise<Template> {
+  async getById(id: string | number): Promise<Template> {
     const response = await apiClient.get<Template>(`/templates/${id}/`);
     return response.data;
   },
@@ -21,12 +21,15 @@ export const templatesService = {
     return response.data;
   },
 
-  async update(id: number, data: Partial<Template>): Promise<Template> {
-    const response = await apiClient.put<Template>(`/templates/${id}/`, data);
+  async update(id: string | number, data: FormData | Partial<Template>): Promise<Template> {
+    const isFormData = data instanceof FormData;
+    const response = await apiClient.put<Template>(`/templates/${id}/`, data, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+    });
     return response.data;
   },
 
-  async delete(id: number): Promise<void> {
+  async delete(id: string | number): Promise<void> {
     await apiClient.delete(`/templates/${id}/`);
   }
 };

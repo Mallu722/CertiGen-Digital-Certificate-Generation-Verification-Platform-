@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: string;
   email: string;
   first_name: string;
   last_name: string;
@@ -40,7 +40,7 @@ export interface RefreshTokenResponse {
 
 // Category Types
 export interface Category {
-  id: number;
+  id: string;
   name: string;
   description: string;
   created_at: string;
@@ -54,11 +54,13 @@ export interface CategoryFormData {
 
 // Template Types
 export interface Template {
-  id: number;
+  id: string;
   name: string;
   description: string;
-  category: number;
+  category: string;
   image: string;
+  image_url?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -66,20 +68,21 @@ export interface Template {
 export interface TemplateFormData {
   name: string;
   description: string;
-  category: number;
+  category: string;
   image?: File;
+  is_active?: boolean;
 }
 
 // Certificate Types
 export interface Certificate {
-  id: number;
+  id: string;
   certificate_number: string;
   title: string;
   description: string;
-  template: number;
+  template: string;
   recipient_name: string;
   recipient_email: string;
-  issued_by: number;
+  issued_by: string;
   issued_at: string;
   verified: boolean;
   verification_id: string;
@@ -91,7 +94,7 @@ export interface CertificateFormData {
   certificate_number: string;
   title: string;
   description: string;
-  template: number;
+  template: string;
   recipient_name: string;
   recipient_email: string;
 }
