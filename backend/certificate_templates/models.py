@@ -17,6 +17,7 @@ class Template(models.Model):
         related_name='templates'
     )
     image = models.ImageField(upload_to=template_upload_path)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
