@@ -95,8 +95,8 @@ class UserViewSet(viewsets.ModelViewSet):
 @permission_classes([AllowAny])
 def token_refresh_view(request):
     """Refresh JWT token"""
-    from rest_framework_simplejwt.tokens import RefreshToken
-    serializer = RefreshTokenSerializer(data=request.data)
+    from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+    serializer = TokenRefreshSerializer(data=request.data)
     if serializer.is_valid():
-        return Response({'access': str(serializer.validated_data['access'])})
+        return Response(serializer.validated_data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -20,6 +20,11 @@ class CertificateViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action == 'verify':
+            return [permissions.AllowAny()]
+        return super().get_permissions()
+
     def perform_create(self, serializer):
         serializer.save(issued_by=self.request.user)
 

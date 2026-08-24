@@ -34,7 +34,6 @@ router.register(r'certificates', certificate_views.CertificateViewSet, basename=
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health_check'),
-    path('api/', include(router.urls)),
     # Auth endpoints
     path('api/accounts/register/', account_views.register_view, name='register'),
     path('api/accounts/login/', account_views.login_view, name='login'),
@@ -43,6 +42,9 @@ urlpatterns = [
     path('api/accounts/refresh/', account_views.token_refresh_view, name='token-refresh'),
     # Verification endpoint
     path('api/verify/<str:certificate_id>/', certificate_views.CertificateViewSet.as_view({'get': 'verify'}), name='verify-certificate'),
+    
+    # Router endpoints (CRUD)
+    path('api/', include(router.urls)),
 ]
 
 if settings.DEBUG:

@@ -20,9 +20,10 @@ class CertificateCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificate
         fields = [
-            'certificate_number', 'title', 'description', 'template',
-            'recipient_name', 'recipient_email'
+            'id', 'certificate_number', 'title', 'description', 'template',
+            'recipient_name', 'recipient_email', 'verification_id', 'issued_by', 'issued_at'
         ]
+        read_only_fields = ['id', 'verification_id', 'issued_by', 'issued_at']
 
 
 class CertificateVerifySerializer(serializers.Serializer):
