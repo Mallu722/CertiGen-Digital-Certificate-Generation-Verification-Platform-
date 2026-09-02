@@ -7,7 +7,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { authService } from '@/services/auth.service';
-import { AlertCircle, LogIn, KeyRound, ShieldAlert } from 'lucide-react';
+import type { Role } from '@/types';
+import { 
+  AlertCircle, 
+  LogIn, 
+  KeyRound, 
+  ShieldCheck, 
+  GraduationCap, 
+  Check, 
+  ArrowRight,
+  User,
+  X,
+  Sparkles
+} from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -32,11 +44,16 @@ const GithubIcon = () => (
 );
 
 export function LoginPage() {
+  const [selectedRole, setSelectedRole] = useState<Role>('ADMIN');
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // OAuth Modals State
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [showGithubModal, setShowGithubModal] = useState(false);
+  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+  const [customGithubUser, setCustomGithubUser] = useState('');
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -53,6 +70,7 @@ export function LoginPage() {
       await authService.login({
         email: data.email,
         password: data.password,
+        role: selectedRole,
       });
       navigate('/dashboard');
     } catch (err: any) {
@@ -62,55 +80,143 @@ export function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
+  const handleSelectRole = (role: Role) => {
+    setSelectedRole(role);
     setError(null);
+  };
+
+
+  // Google OAuth Login Action
+  const handleGoogleAccountSelect = async (accountEmail: string, name?: string) => {
+    setLoading(true);
+    setError(null);
+    setShowGoogleModal(false);
     try {
-      await authService.googleLogin();
+      await authService.oauthLogin({
+        email: accountEmail,
+        provider: 'google',
+        role: selectedRole,
+        first_name: name || 'Google User',
+      });
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Google login failed');
+      setError(err.response?.data?.error || 'Google login failed.');
     } finally {
-      setGoogleLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleGithubLogin = async () => {
-    setGithubLoading(true);
+  // GitHub OAuth Login Action
+  const handleGithubAccountSelect = async (username: string) => {
+    if (!username.trim()) return;
+    setLoading(true);
     setError(null);
+    setShowGithubModal(false);
     try {
-      await authService.githubLogin();
+      const email = username.includes('@') ? username : `${username.toLowerCase()}@github.com`;
+      await authService.oauthLogin({
+        email: email,
+        provider: 'github',
+        role: selectedRole,
+        first_name: username,
+        username: username,
+      });
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'GitHub login failed');
+      setError(err.response?.data?.error || 'GitHub login failed.');
     } finally {
-      setGithubLoading(false);
+      setLoading(false);
     }
   };
 
   return (
     <div className="w-full space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-slate-800 tracking-tight flex items-center justify-center gap-2">
+        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-2">
           <LogIn className="w-7 h-7 text-sky-600" />
           Welcome Back
         </h2>
-        <p className="text-sm text-slate-500 mt-2">Sign in to your digital certificate locker</p>
+        <p className="text-sm text-slate-500 mt-1">Select your portal role and sign in</p>
+      </div>
+
+      {/* 1. ROLE SELECTOR: ADMIN vs MENTOR */}
+      <div className="space-y-2">
+        <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
+          Select Your Portal Role:
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Admin Role Card */}
+          <div
+            onClick={() => handleSelectRole('ADMIN')}
+            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex flex-col justify-between ${
+              selectedRole === 'ADMIN'
+                ? 'border-sky-600 bg-sky-50/50 shadow-sm ring-2 ring-sky-100'
+                : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-xl ${selectedRole === 'ADMIN' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              {selectedRole === 'ADMIN' && (
+                <span className="w-5 h-5 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </span>
+              )}
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-900">Administrator</h4>
+              <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                Full platform audit, templates & revocation
+              </p>
+            </div>
+          </div>
+
+          {/* Mentor Role Card */}
+          <div
+            onClick={() => handleSelectRole('MENTOR')}
+            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex flex-col justify-between ${
+              selectedRole === 'MENTOR'
+                ? 'border-indigo-600 bg-indigo-50/50 shadow-sm ring-2 ring-indigo-100'
+                : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className={`p-2 rounded-xl ${selectedRole === 'MENTOR' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                <GraduationCap className="w-4 h-4" />
+              </div>
+              {selectedRole === 'MENTOR' && (
+                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">
+                  <Check className="w-3 h-3 stroke-[3]" />
+                </span>
+              )}
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-slate-900">Mentor / Issuer</h4>
+              <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
+                Issue certificates, student ledger & verification
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700 text-sm">
           <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
           <div>
-            <h4 className="font-semibold">Login Failed</h4>
+            <h4 className="font-semibold">Authentication Error</h4>
             <p className="mt-0.5">{error}</p>
           </div>
         </div>
       )}
 
+      {/* 2. CREDENTIALS FORM */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <FormLabel htmlFor="email">Email Address</FormLabel>
+          <FormLabel htmlFor="email">
+            Email Address ({selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor'})
+          </FormLabel>
           <Controller
             name="email"
             control={form.control}
@@ -119,7 +225,9 @@ export function LoginPage() {
                 <FormControl>
                   <Input id="email" type="email" placeholder="e.g. name@company.com" {...field} />
                 </FormControl>
-                <FormMessage />
+                {form.formState.errors.email && (
+                  <FormMessage>{form.formState.errors.email.message}</FormMessage>
+                )}
               </FormItem>
             )}
           />
@@ -140,25 +248,39 @@ export function LoginPage() {
                 <FormControl>
                   <Input id="password" type="password" placeholder="••••••••" {...field} />
                 </FormControl>
-                <FormMessage />
+                {form.formState.errors.password && (
+                  <FormMessage>{form.formState.errors.password.message}</FormMessage>
+                )}
               </FormItem>
             )}
           />
         </div>
 
-        <Button type="submit" className="w-full h-11" isLoading={loading} disabled={loading || googleLoading || githubLoading}>
-          Sign In
+        <Button 
+          type="submit" 
+          className={`w-full h-11 text-base font-bold shadow-md ${
+            selectedRole === 'ADMIN' 
+              ? 'bg-gradient-to-r from-sky-600 to-indigo-600 shadow-sky-600/25' 
+              : 'bg-gradient-to-r from-indigo-600 to-violet-600 shadow-indigo-600/25'
+          }`} 
+          isLoading={loading} 
+          disabled={loading}
+        >
+          Sign In as {selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor'}
+          <ArrowRight className="w-4 h-4 ml-1.5" />
         </Button>
       </form>
 
-      {/* Social Logins */}
-      <div className="space-y-4 pt-2">
+      {/* 3. SOCIAL LOGINS (GOOGLE & GITHUB) */}
+      <div className="space-y-4 pt-1">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-200" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-3 text-slate-400 font-medium uppercase tracking-wider">Or continue with</span>
+            <span className="bg-white px-3 text-slate-400 font-semibold uppercase tracking-wider">
+              Or sign in with OAuth
+            </span>
           </div>
         </div>
 
@@ -166,29 +288,27 @@ export function LoginPage() {
           <Button 
             variant="outline" 
             type="button" 
-            onClick={handleGoogleLogin} 
-            disabled={loading || googleLoading || githubLoading}
-            isLoading={googleLoading}
-            className="h-10 border-slate-200 hover:bg-slate-50 transition-colors"
+            onClick={() => setShowGoogleModal(true)} 
+            disabled={loading}
+            className="h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors"
           >
-            {!googleLoading && <GoogleIcon />}
+            <GoogleIcon />
             Google
           </Button>
           <Button 
             variant="outline" 
             type="button" 
-            onClick={handleGithubLogin} 
-            disabled={loading || googleLoading || githubLoading}
-            isLoading={githubLoading}
-            className="h-10 border-slate-200 hover:bg-slate-50 transition-colors"
+            onClick={() => setShowGithubModal(true)} 
+            disabled={loading}
+            className="h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors"
           >
-            {!githubLoading && <GithubIcon />}
+            <GithubIcon />
             GitHub
           </Button>
         </div>
       </div>
 
-      <div className="text-center pt-2">
+      <div className="text-center pt-1">
         <p className="text-xs text-slate-500">
           Don't have an account?{' '}
           <Link to="/register" className="text-sky-600 font-semibold hover:text-sky-700 hover:underline transition-colors">
@@ -197,23 +317,202 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Demo credentials card */}
-      <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl space-y-1.5">
-        <h4 className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-          <KeyRound className="w-3.5 h-3.5 text-slate-500" />
-          Quick Access Credentials:
-        </h4>
-        <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-          <div className="bg-white p-1.5 border rounded border-slate-200/50">
-            <span className="font-semibold block text-slate-600">Administrator Role</span>
-            <span>admin@example.com / password</span>
-          </div>
-          <div className="bg-white p-1.5 border rounded border-slate-200/50">
-            <span className="font-semibold block text-slate-600">Mentor / Issuer Role</span>
-            <span>mentor@example.com / password</span>
+      {/* GOOGLE ACCOUNT CHOOSER MODAL */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <GoogleIcon />
+                <span className="font-bold text-sm text-slate-900">Sign in with Google</span>
+              </div>
+              <button 
+                onClick={() => setShowGoogleModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Choose an account</p>
+                <p className="text-xs text-slate-500">
+                  to continue to <strong>CertiGen</strong> as{' '}
+                  <span className="font-bold text-sky-600">
+                    {selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor / Issuer'}
+                  </span>
+                </p>
+              </div>
+
+              {/* Connected Google Accounts List */}
+              <div className="divide-y divide-slate-100 border border-slate-200/80 rounded-2xl overflow-hidden bg-slate-50/50">
+                {/* Account 1 */}
+                <button
+                  type="button"
+                  onClick={() => handleGoogleAccountSelect('mallikarjunhiremath0722@gmail.com', 'Mallikarjun Hiremath')}
+                  className="w-full flex items-center gap-3.5 p-3 hover:bg-white hover:shadow-xs transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-sky-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                    M
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-900 group-hover:text-sky-600 transition-colors">
+                        Mallikarjun Hiremath
+                      </p>
+                      <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">
+                        Connected
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono truncate mt-0.5">
+                      mallikarjunhiremath0722@gmail.com
+                    </p>
+                  </div>
+                </button>
+
+                {/* Account 2 */}
+                <button
+                  type="button"
+                  onClick={() => handleGoogleAccountSelect('mh2429419@gmail.com', 'MH Mentor')}
+                  className="w-full flex items-center gap-3.5 p-3 hover:bg-white hover:shadow-xs transition-all text-left group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                    MH
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                        MH Mentor Account
+                      </p>
+                      <span className="text-[10px] font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200/60">
+                        Google Verified
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono truncate mt-0.5">
+                      mh2429419@gmail.com
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Option to use another Google account */}
+              <div className="pt-2">
+                <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                  Or sign in with another Google email:
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="yourname@gmail.com"
+                    value={customGoogleEmail}
+                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                    className="text-xs h-9"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-9 px-3 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold"
+                    onClick={() => handleGoogleAccountSelect(customGoogleEmail)}
+                    disabled={!customGoogleEmail.includes('@')}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* GITHUB ACCOUNT CHOOSER MODAL */}
+      {showGithubModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <GithubIcon />
+                <span className="font-bold text-sm text-slate-900">Authorize CertiGen via GitHub</span>
+              </div>
+              <button 
+                onClick={() => setShowGithubModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Connected GitHub Account</p>
+                <p className="text-xs text-slate-500">
+                  Authorize your GitHub account to sign in as{' '}
+                  <span className="font-bold text-indigo-600">
+                    {selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor / Issuer'}
+                  </span>
+                </p>
+              </div>
+
+              {/* Primary Connected GitHub Card */}
+              <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-3">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src="https://github.com/Mallu722.png" 
+                    alt="GitHub Profile" 
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                    className="w-11 h-11 rounded-full border-2 border-white shadow-xs"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-bold text-slate-900">Mallu722</p>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                        Connected
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-mono truncate">
+                      mallikarjunhiremath0722@gmail.com
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full h-10 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm"
+                  onClick={() => handleGithubAccountSelect('Mallu722')}
+                >
+                  <Check className="w-4 h-4 mr-1.5" />
+                  Authorize as Mallu722 (Connected Email)
+                </Button>
+              </div>
+
+              {/* Or enter another GitHub username */}
+              <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Or use another GitHub username / email:
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="e.g. your-github-user"
+                    value={customGithubUser}
+                    onChange={(e) => setCustomGithubUser(e.target.value)}
+                    className="text-xs h-9"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-9 px-3 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold"
+                    onClick={() => handleGithubAccountSelect(customGithubUser)}
+                    disabled={!customGithubUser.trim()}
+                  >
+                    Authorize
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

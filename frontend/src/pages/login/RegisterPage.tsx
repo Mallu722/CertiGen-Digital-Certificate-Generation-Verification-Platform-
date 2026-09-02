@@ -134,7 +134,9 @@ export function RegisterPage() {
                   <FormControl>
                     <Input id="first_name" placeholder="John" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  {form.formState.errors.first_name && (
+                    <FormMessage>{form.formState.errors.first_name.message}</FormMessage>
+                  )}
                 </FormItem>
               )}
             />
@@ -150,7 +152,9 @@ export function RegisterPage() {
                   <FormControl>
                     <Input id="last_name" placeholder="Doe" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  {form.formState.errors.last_name && (
+                    <FormMessage>{form.formState.errors.last_name.message}</FormMessage>
+                  )}
                 </FormItem>
               )}
             />
@@ -164,10 +168,12 @@ export function RegisterPage() {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormControl>
-                  <Input id="username" placeholder="johndoe12" {...field} />
-                </FormControl>
-                <FormMessage />
+                  <FormControl>
+                    <Input id="username" placeholder="johndoe12" {...field} />
+                  </FormControl>
+                  {form.formState.errors.username && (
+                    <FormMessage>{form.formState.errors.username.message}</FormMessage>
+                  )}
               </FormItem>
             )}
           />
@@ -180,10 +186,12 @@ export function RegisterPage() {
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormControl>
-                  <Input id="email" type="email" placeholder="john@example.com" {...field} />
-                </FormControl>
-                <FormMessage />
+                  <FormControl>
+                    <Input id="email" type="email" placeholder="john@example.com" {...field} />
+                  </FormControl>
+                  {form.formState.errors.email && (
+                    <FormMessage>{form.formState.errors.email.message}</FormMessage>
+                  )}
               </FormItem>
             )}
           />
@@ -200,7 +208,9 @@ export function RegisterPage() {
                   <FormControl>
                     <Input id="password" type="password" placeholder="••••••" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  {form.formState.errors.password && (
+                    <FormMessage>{form.formState.errors.password.message}</FormMessage>
+                  )}
                 </FormItem>
               )}
             />
@@ -216,7 +226,9 @@ export function RegisterPage() {
                   <FormControl>
                     <Input id="password_confirm" type="password" placeholder="••••••" {...field} />
                   </FormControl>
-                  <FormMessage />
+                  {form.formState.errors.password_confirm && (
+                    <FormMessage>{form.formState.errors.password_confirm.message}</FormMessage>
+                  )}
                 </FormItem>
               )}
             />
