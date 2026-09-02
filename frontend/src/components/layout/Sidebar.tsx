@@ -67,9 +67,12 @@ export function Sidebar({
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-sm">
         <Link to="/dashboard" className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-violet-500 flex items-center justify-center text-white font-black shadow-lg shadow-sky-500/25 shrink-0">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
+          <img 
+            src="/favicon.svg" 
+            alt="CertiGen Brand" 
+            className="w-8 h-8 shrink-0 drop-shadow-md" 
+          />
+
           {isOpen && (
             <div className="flex flex-col">
               <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">

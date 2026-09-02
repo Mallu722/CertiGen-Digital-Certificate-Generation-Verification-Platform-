@@ -68,5 +68,47 @@ export const certificatesService = {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  },
+
+  async parseSheet(file: File): Promise<{ count: number; filename: string; recipients: any[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiClient.post('/certificates/parse-sheet/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data;
+  },
+
+  async bulkIssue(payload: any): Promise<{
+    batch_id: string;
+    total_issued: number;
+    emails_sent: number;
+    zip_filename: string;
+    zip_relative_url: string;
+    certificates: any[];
+    errors: string[];
+  }> {
+    const isFormData = payload instanceof FormData;
+    const response = await apiClient.post('/certificates/bulk-issue/', payload, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : undefined
+    });
+    return response.data;
+  },
+
+  async downloadBatchZip(zipFilename: string): Promise<void> {
+    const response = await apiClient.get('/certificates/download-batch-zip/', {
+      params: { filename: zipFilename },
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'application/zip' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = zipFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   }
-};
+};
+

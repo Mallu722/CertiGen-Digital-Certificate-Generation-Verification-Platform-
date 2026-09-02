@@ -73,6 +73,8 @@ export interface Template {
   image?: string;
   image_url?: string;
   is_active: boolean;
+  is_private?: boolean;
+  access_password?: string;
   created_at: string;
   updated_at: string;
 }
@@ -92,7 +94,10 @@ export interface TemplateFormData {
   category: string;
   image?: File;
   is_active?: boolean;
+  is_private?: boolean;
+  access_password?: string;
 }
+
 
 // Certificate Types
 export type CertificateStatus = 'VALID' | 'REVOKED';
