@@ -27,8 +27,11 @@ class Template(models.Model):
     )
     image = models.ImageField(upload_to=template_upload_path, blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    is_private = models.BooleanField(default=False)
+    access_password = models.CharField(max_length=128, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
 
 
     class Meta:

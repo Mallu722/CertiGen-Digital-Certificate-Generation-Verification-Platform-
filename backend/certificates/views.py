@@ -57,7 +57,15 @@ class CertificateViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
+        # Validate private template password if user is not admin
+        template = serializer.validated_data.get('template')
+        if template and template.is_private and getattr(self.request.user, 'role', '') != 'ADMIN':
+            provided_pass = self.request.data.get('template_password', '') or self.request.data.get('password', '')
+            if template.access_password and provided_pass.strip() != template.access_password.strip():
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('This template is private and requires a valid access password set by an Administrator.')
         serializer.save(issued_by=self.request.user)
+
 
     @action(detail=False, methods=['get'], url_path='next-id')
     def next_id(self, request):
@@ -179,3 +187,119 @@ class CertificateViewSet(viewsets.ModelViewSet):
             'message': 'Certificate reactivated successfully',
             'certificate': CertificateSerializer(certificate).data
         })
+
+    @action(detail=False, methods=['post'], url_path='parse-sheet', permission_classes=[IsAuthenticated])
+    def parse_sheet(self, request):
+        """Parse uploaded Excel or CSV file and return structured recipient preview."""
+        uploaded_file = request.FILES.get('file')
+        if not uploaded_file:
+            return Response({'error': 'No file uploaded. Please upload a .xlsx, .xls, or .csv file.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            from .bulk_service import parse_recipients_file
+            recipients = parse_recipients_file(uploaded_file, uploaded_file.name)
+            return Response({
+                'count': len(recipients),
+                'filename': uploaded_file.name,
+                'recipients': recipients
+            })
+        except Exception as e:
+            return Response({'error': f'Failed to parse sheet: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='bulk-issue', permission_classes=[IsAuthenticated])
+    def bulk_issue(self, request):
+        """
+        Generate certificates for a batch of recipients, create single ZIP file,
+        and optionally send emails with attached certificate PDFs.
+        """
+        import json
+        from datetime import datetime
+        from certificate_templates.models import Template
+        from .bulk_service import generate_bulk_certificates_and_zip, parse_recipients_file
+        
+        # 1. Template validation
+        template_id = request.data.get('template')
+        if not template_id:
+            return Response({'error': 'Template is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            template = Template.objects.get(id=template_id)
+        except Template.DoesNotExist:
+            return Response({'error': 'Template not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Private template check
+        if template.is_private and getattr(request.user, 'role', '') != 'ADMIN':
+            provided_pass = request.data.get('template_password', '') or request.data.get('password', '')
+            if template.access_password and provided_pass.strip() != template.access_password.strip():
+                return Response({'error': 'Invalid access password for this private template.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 2. Extract recipients
+        recipients = []
+        if 'file' in request.FILES:
+            uploaded_file = request.FILES['file']
+            recipients = parse_recipients_file(uploaded_file, uploaded_file.name)
+        elif 'recipients' in request.data:
+            rec_data = request.data.get('recipients')
+            if isinstance(rec_data, str):
+                try:
+                    recipients = json.loads(rec_data)
+                except Exception:
+                    recipients = []
+            elif isinstance(rec_data, list):
+                recipients = rec_data
+
+        if not recipients:
+            return Response({'error': 'No recipients found to generate certificates for.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 3. Common details
+        common_data = {
+            'title': request.data.get('title') or request.data.get('event_name') or 'Certificate of Achievement',
+            'achievement': request.data.get('achievement') or 'Outstanding Achievement',
+            'organization_name': request.data.get('organization_name') or 'CertiGen Platform',
+            'institute_subtitle': request.data.get('institute_subtitle', ''),
+            'signatory_name': request.data.get('signatory_name') or 'Dr. Rajesh Kumar',
+            'signatory_title': request.data.get('signatory_title') or 'Dean of Academic Affairs',
+            'second_signatory_name': request.data.get('second_signatory_name', 'Prof. Vikram Singh'),
+            'second_signatory_title': request.data.get('second_signatory_title', 'Director of Certification'),
+            'primary_color': request.data.get('primary_color'),
+            'secondary_color': request.data.get('secondary_color'),
+            'accent_color': request.data.get('accent_color'),
+            'institute_logo_base64': request.data.get('institute_logo_base64', ''),
+            'issue_date': request.data.get('issue_date', datetime.now().strftime('%Y-%m-%d')),
+        }
+
+        # 4. Email flag
+        send_emails = request.data.get('send_email') in [True, 'true', 'True', '1', 1]
+        base_url = request.META.get('HTTP_ORIGIN') or getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+
+        # 5. Process batch
+        try:
+            result = generate_bulk_certificates_and_zip(
+                user=request.user,
+                template=template,
+                recipients=recipients,
+                common_data=common_data,
+                send_emails=send_emails,
+                base_url=base_url
+            )
+            return Response(result, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': f'Bulk issuance failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path='download-batch-zip', permission_classes=[IsAuthenticated])
+    def download_batch_zip(self, request):
+        """Download batch certificates ZIP file."""
+        zip_filename = request.query_params.get('filename')
+        if not zip_filename:
+            return Response({'error': 'Filename is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        safe_name = os.path.basename(zip_filename)
+        zip_path = os.path.join(settings.MEDIA_ROOT, 'batches', safe_name)
+        if not os.path.exists(zip_path):
+            return Response({'error': 'Batch ZIP archive not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        with open(zip_path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename="{safe_name}"'
+            return response
+

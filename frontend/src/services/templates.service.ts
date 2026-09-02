@@ -31,5 +31,10 @@ export const templatesService = {
 
   async delete(id: string | number): Promise<void> {
     await apiClient.delete(`/templates/${id}/`);
+  },
+
+  async unlock(id: string | number, password: string): Promise<{ status: string; message: string }> {
+    const response = await apiClient.post<{ status: string; message: string }>(`/templates/${id}/unlock/`, { password });
+    return response.data;
   }
-};
+};
