@@ -37,9 +37,11 @@ urlpatterns = [
     # Auth endpoints
     path('api/accounts/register/', account_views.register_view, name='register'),
     path('api/accounts/login/', account_views.login_view, name='login'),
+    path('api/accounts/oauth/', account_views.oauth_login_view, name='oauth-login'),
     path('api/accounts/profile/', account_views.profile_view, name='profile'),
     path('api/accounts/profile/update/', account_views.profile_update_view, name='profile-update'),
     path('api/accounts/refresh/', account_views.token_refresh_view, name='token-refresh'),
+
     # Verification endpoint
     path('api/verify/<str:certificate_id>/', certificate_views.CertificateViewSet.as_view({'get': 'verify'}), name='verify-certificate'),
     
