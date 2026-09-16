@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'certificate_templates',
     'certificates',
     'verification',
+    'assistant',
 ]
 
 MIDDLEWARE = [

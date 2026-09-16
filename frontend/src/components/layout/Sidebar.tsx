@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  Bot
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { authService } from '@/services/auth.service';

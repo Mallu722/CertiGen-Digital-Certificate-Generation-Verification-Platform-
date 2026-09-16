@@ -10,6 +10,7 @@ import { CertificatesListPage } from './pages/certificates/CertificatesListPage'
 import { CertificatesCreatePage } from './pages/certificates/CertificatesCreatePage';
 import { VerifyPage } from './pages/verify/VerifyPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { CertiGenAIAssistant } from './components/assistant/CertiGenAIAssistant';
 import { authService } from './services/auth.service';
 
 interface ProtectedRouteProps {
@@ -43,6 +44,9 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
+      {/* Global Omnipresent RAG Assistant */}
+      <CertiGenAIAssistant />
+
       <Routes>
         {/* Public Routes */}
         <Route path="/verify" element={<VerifyPage />} />
@@ -84,3 +88,4 @@ function App() {
 }
 
 export default App;
+
