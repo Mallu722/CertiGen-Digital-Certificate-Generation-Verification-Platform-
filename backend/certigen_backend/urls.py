@@ -32,6 +32,7 @@ router.register(r'templates', template_views.TemplateViewSet, basename='template
 router.register(r'certificates', certificate_views.CertificateViewSet, basename='certificate')
 
 urlpatterns = [
+    path('', health_check, name='root_health'),
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health_check'),
     # Auth endpoints

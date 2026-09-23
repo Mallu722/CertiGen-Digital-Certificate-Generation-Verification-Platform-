@@ -1,3 +1,4 @@
+import requests
 from rest_framework import status, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -94,9 +95,27 @@ def oauth_login_view(request):
     email = request.data.get('email')
     provider = request.data.get('provider', 'google').lower()
     selected_role = request.data.get('role', 'MENTOR')
+    token = request.data.get('token')
+    
+    email = request.data.get('email')
     first_name = request.data.get('first_name', '')
     last_name = request.data.get('last_name', '')
     username = request.data.get('username')
+
+    if provider == 'google' and token:
+        try:
+            # Verify the access_token by fetching user profile from Google
+            response = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
+            if response.status_code != 200:
+                return Response({'error': 'Invalid Google token.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            google_data = response.json()
+            email = google_data.get('email')
+            first_name = google_data.get('given_name', '')
+            last_name = google_data.get('family_name', '')
+            
+        except Exception as e:
+            return Response({'error': 'Failed to verify Google token.'}, status=status.HTTP_400_BAD_REQUEST)
 
     if not email:
         return Response({'error': 'Email is required for OAuth login.'}, status=status.HTTP_400_BAD_REQUEST)

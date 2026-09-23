@@ -200,3 +200,6 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'CertiGen Verification Plat
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
 
 
+
+# Google OAuth
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', 'YOUR_CLIENT_ID_HERE')
