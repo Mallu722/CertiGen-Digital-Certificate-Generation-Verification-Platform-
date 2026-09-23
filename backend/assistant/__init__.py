@@ -1,0 +1,1 @@
+# CertiGen AI Assistant Module

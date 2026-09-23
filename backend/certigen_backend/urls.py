@@ -45,6 +45,9 @@ urlpatterns = [
     # Verification endpoint
     path('api/verify/<str:certificate_id>/', certificate_views.CertificateViewSet.as_view({'get': 'verify'}), name='verify-certificate'),
     
+    # AI Assistant & Knowledge Base
+    path('api/assistant/', include('assistant.urls')),
+    
     # Router endpoints (CRUD)
     path('api/', include(router.urls)),
 ]

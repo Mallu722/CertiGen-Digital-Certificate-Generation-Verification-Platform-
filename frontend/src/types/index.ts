@@ -172,3 +172,33 @@ export interface PaginatedResponse<T> {
   previous: string | null;
   results: T[];
 }
+
+// AI Assistant & Knowledge Base Types
+export interface AssistantSource {
+  id: string;
+  title: string;
+  category: string;
+  score: number;
+  summary: string;
+}
+
+export interface AssistantChatResponse {
+  answer: string;
+  sources: AssistantSource[];
+  suggested_queries: string[];
+  model_used: string;
+}
+
+export interface AssistantTopic {
+  id: string;
+  title: string;
+  category: string;
+  summary: string;
+  tags: string[];
+}
+
+export interface AssistantSuggestionCategory {
+  category: string;
+  items: string[];
+}
+
