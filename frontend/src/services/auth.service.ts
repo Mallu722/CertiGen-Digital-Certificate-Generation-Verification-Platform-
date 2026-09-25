@@ -15,7 +15,8 @@ export const authService = {
   },
 
   async oauthLogin(data: {
-    email: string;
+    email?: string;
+    token?: string;
     provider: 'google' | 'github';
     role: 'ADMIN' | 'MENTOR';
     first_name?: string;
@@ -31,8 +32,8 @@ export const authService = {
     return response.data;
   },
 
-  async googleLogin(email = 'mallikarjunhiremath0722@gmail.com', role: 'ADMIN' | 'MENTOR' = 'MENTOR'): Promise<AuthResponse> {
-    return this.oauthLogin({ email, provider: 'google', role, first_name: 'Google User' });
+  async googleLogin(token: string, role: 'ADMIN' | 'MENTOR' = 'MENTOR'): Promise<AuthResponse> {
+    return this.oauthLogin({ token, provider: 'google', role });
   },
 
   async githubLogin(username = 'github_user', role: 'ADMIN' | 'MENTOR' = 'MENTOR'): Promise<AuthResponse> {
