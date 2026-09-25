@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useGoogleLogin } from '@react-oauth/google';
 import { useNavigate, Link } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -76,18 +77,21 @@ export function RegisterPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
-    setError(null);
-    try {
-      await authService.googleLogin();
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Google registration failed');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setGoogleLoading(true);
+      setError(null);
+      try {
+        await authService.googleLogin(tokenResponse.access_token, 'MENTOR');
+        navigate('/dashboard');
+      } catch (err: any) {
+        setError(err.response?.data?.error || 'Google registration failed.');
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    onError: () => setError('Google registration failed.'),
+  });
 
   const handleGithubLogin = async () => {
     setGithubLoading(true);
@@ -255,7 +259,7 @@ export function RegisterPage() {
           <Button 
             variant="outline" 
             type="button" 
-            onClick={handleGoogleLogin} 
+            onClick={() => loginWithGoogle()} 
             disabled={loading || googleLoading || githubLoading}
             isLoading={googleLoading}
             className="h-10 border-slate-200 hover:bg-slate-50 transition-colors"
