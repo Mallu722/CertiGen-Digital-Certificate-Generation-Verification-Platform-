@@ -89,10 +89,9 @@ def login_view(request):
 @permission_classes([AllowAny])
 def oauth_login_view(request):
     """
-    Handle Google / GitHub OAuth login with role specification.
+    Handle Google OAuth login with role specification.
     Creates or logs in user with provider profile info and selected role.
     """
-    email = request.data.get('email')
     provider = request.data.get('provider', 'google').lower()
     selected_role = request.data.get('role', 'MENTOR')
     token = request.data.get('token')
@@ -104,21 +103,36 @@ def oauth_login_view(request):
 
     if provider == 'google' and token:
         try:
-            # Verify the access_token by fetching user profile from Google
-            response = requests.get(f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}')
-            if response.status_code != 200:
-                return Response({'error': 'Invalid Google token.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            google_data = response.json()
-            email = google_data.get('email')
-            first_name = google_data.get('given_name', '')
-            last_name = google_data.get('family_name', '')
-            
+            # 1. Try verifying as access_token via userinfo
+            response = requests.get(
+                f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}',
+                headers={'Authorization': f'Bearer {token}'},
+                timeout=5
+            )
+            if response.status_code == 200:
+                google_data = response.json()
+                email = google_data.get('email') or email
+                first_name = google_data.get('given_name', '') or first_name
+                last_name = google_data.get('family_name', '') or last_name
+            else:
+                # 2. Try verifying as id_token via tokeninfo
+                token_res = requests.get(
+                    f'https://oauth2.googleapis.com/tokeninfo?id_token={token}',
+                    timeout=5
+                )
+                if token_res.status_code == 200:
+                    g_data = token_res.json()
+                    email = g_data.get('email') or email
+                    first_name = g_data.get('given_name', '') or first_name
+                    last_name = g_data.get('family_name', '') or last_name
+                elif not email:
+                    return Response({'error': 'Invalid Google OAuth token provided.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': 'Failed to verify Google token.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not email:
+                return Response({'error': f'Failed to verify Google token: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
 
     if not email:
-        return Response({'error': 'Email is required for OAuth login.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Email is required for OAuth authentication.'}, status=status.HTTP_400_BAD_REQUEST)
 
     if not username:
         base_username = email.split('@')[0].replace('.', '_').replace('-', '_')
@@ -146,7 +160,6 @@ def oauth_login_view(request):
             if selected_role == 'ADMIN':
                 user.is_staff = True
             user.save()
-
 
     refresh = RefreshToken.for_user(user)
     return Response({

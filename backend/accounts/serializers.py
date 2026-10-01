@@ -13,10 +13,11 @@ class UserSerializer(serializers.ModelSerializer):
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
     password_confirm = serializers.CharField(write_only=True, style={'input_type': 'password'})
+    role = serializers.CharField(required=False, default='MENTOR')
 
     class Meta:
         model = User
-        fields = ['email', 'username', 'first_name', 'last_name', 'password', 'password_confirm']
+        fields = ['email', 'username', 'first_name', 'last_name', 'role', 'password', 'password_confirm']
 
     def validate(self, data):
         if data['password'] != data['password_confirm']:
@@ -25,13 +26,17 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
+        role = validated_data.get('role', 'MENTOR').upper()
+        is_admin = (role == 'ADMIN')
         user = User.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
             first_name=validated_data['first_name'],
             last_name=validated_data['last_name'],
             password=validated_data['password'],
-            role='MENTOR'
+            role=role,
+            is_staff=is_admin,
+            is_superuser=is_admin
         )
         return user
 

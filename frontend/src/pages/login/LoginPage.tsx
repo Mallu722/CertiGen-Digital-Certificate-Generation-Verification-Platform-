@@ -38,21 +38,11 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const GithubIcon = () => (
-  <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.579.688.481C19.137 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-  </svg>
-);
-
 export function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<Role>('ADMIN');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  // OAuth Modals State
-  const [showGithubModal, setShowGithubModal] = useState(false);
-  const [customGithubUser, setCustomGithubUser] = useState('');
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -105,29 +95,6 @@ export function LoginPage() {
     },
     onError: errorResponse => setError('Google login failed.'),
   });
-
-  // GitHub OAuth Login Action
-  const handleGithubAccountSelect = async (username: string) => {
-    if (!username.trim()) return;
-    setLoading(true);
-    setError(null);
-    setShowGithubModal(false);
-    try {
-      const email = username.includes('@') ? username : `${username.toLowerCase()}@github.com`;
-      await authService.oauthLogin({
-        email: email,
-        provider: 'github',
-        role: selectedRole,
-        first_name: username,
-        username: username,
-      });
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'GitHub login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="w-full space-y-6">
@@ -271,7 +238,7 @@ export function LoginPage() {
         </Button>
       </form>
 
-      {/* 3. SOCIAL LOGINS (GOOGLE & GITHUB) */}
+      {/* 3. SOCIAL LOGINS (GOOGLE OAUTH) */}
       <div className="space-y-4 pt-1">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
@@ -284,26 +251,16 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div>
           <Button 
             variant="outline" 
             type="button" 
             onClick={() => loginWithGoogle()} 
             disabled={loading}
-            className="h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors"
+            className="w-full h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors flex items-center justify-center"
           >
             <GoogleIcon />
-            Google
-          </Button>
-          <Button 
-            variant="outline" 
-            type="button" 
-            onClick={() => setShowGithubModal(true)} 
-            disabled={loading}
-            className="h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors"
-          >
-            <GithubIcon />
-            GitHub
+            Continue with Google
           </Button>
         </div>
       </div>
@@ -316,95 +273,6 @@ export function LoginPage() {
           </Link>
         </p>
       </div>
-
-      {/* GITHUB ACCOUNT CHOOSER MODAL */}
-      {showGithubModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <GithubIcon />
-                <span className="font-bold text-sm text-slate-900">Authorize CertiGen via GitHub</span>
-              </div>
-              <button 
-                onClick={() => setShowGithubModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="py-4 space-y-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-800">Connected GitHub Account</p>
-                <p className="text-xs text-slate-500">
-                  Authorize your GitHub account to sign in as{' '}
-                  <span className="font-bold text-indigo-600">
-                    {selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor / Issuer'}
-                  </span>
-                </p>
-              </div>
-
-              {/* Primary Connected GitHub Card */}
-              <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 space-y-3">
-                <div className="flex items-center gap-3">
-                  <img 
-                    src="https://github.com/Mallu722.png" 
-                    alt="GitHub Profile" 
-                    onError={(e) => {
-                      // Fallback if image fails to load
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                    className="w-11 h-11 rounded-full border-2 border-white shadow-xs"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-bold text-slate-900">Mallu722</p>
-                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                        Connected
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 font-mono truncate">
-                      mallikarjunhiremath0722@gmail.com
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full h-10 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-sm"
-                  onClick={() => handleGithubAccountSelect('Mallu722')}
-                >
-                  <Check className="w-4 h-4 mr-1.5" />
-                  Authorize as Mallu722 (Connected Email)
-                </Button>
-              </div>
-
-              {/* Or enter another GitHub username */}
-              <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                <label className="text-xs font-semibold text-slate-700 block">
-                  Or use another GitHub username / email:
-                </label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g. your-github-user"
-                    value={customGithubUser}
-                    onChange={(e) => setCustomGithubUser(e.target.value)}
-                    className="text-xs h-9"
-                  />
-                  <Button
-                    size="sm"
-                    className="h-9 px-3 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold"
-                    onClick={() => handleGithubAccountSelect(customGithubUser)}
-                    disabled={!customGithubUser.trim()}
-                  >
-                    Authorize
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

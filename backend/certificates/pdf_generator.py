@@ -201,19 +201,31 @@ def generate_certificate_pdf(certificate, base_url="http://localhost:5173") -> b
         c.circle(cx + dx * 8, cy + dy * 8, 2.5, fill=1, stroke=0)
 
     # 4. Top Header & Organization Logo
-    # Draw custom Institute Logo if provided as base64 image
+    # Draw custom Institute Logo if provided
     logo_drawn = False
-    inst_logo = meta.get('institute_logo_base64')
-    if inst_logo and inst_logo.startswith('data:image'):
+    inst_logo = meta.get('institute_logo_base64') or (tpl.image.path if tpl and tpl.image else '')
+    if inst_logo:
         try:
-            format_part, imgstr = inst_logo.split(';base64,')
-            img_data = base64.b64decode(imgstr)
-            logo_img = Image.open(io.BytesIO(img_data))
-            logo_buffer = io.BytesIO()
-            logo_img.save(logo_buffer, format='PNG')
-            logo_buffer.seek(0)
-            c.drawImage(ImageReader(logo_buffer), page_width / 2.0 - 24, page_height - 98, width=48, height=48, preserveAspectRatio=True)
-            logo_drawn = True
+            logo_img = None
+            if str(inst_logo).startswith('data:image'):
+                format_part, imgstr = str(inst_logo).split(';base64,', 1)
+                img_data = base64.b64decode(imgstr)
+                logo_img = Image.open(io.BytesIO(img_data))
+            elif os.path.exists(str(inst_logo)):
+                logo_img = Image.open(str(inst_logo))
+            elif len(str(inst_logo)) > 100:
+                try:
+                    img_data = base64.b64decode(str(inst_logo))
+                    logo_img = Image.open(io.BytesIO(img_data))
+                except Exception:
+                    pass
+
+            if logo_img:
+                logo_buffer = io.BytesIO()
+                logo_img.convert("RGBA").save(logo_buffer, format='PNG')
+                logo_buffer.seek(0)
+                c.drawImage(ImageReader(logo_buffer), page_width / 2.0 - 24, page_height - 98, width=48, height=48, preserveAspectRatio=True, mask='auto')
+                logo_drawn = True
         except Exception:
             logo_drawn = False
 
