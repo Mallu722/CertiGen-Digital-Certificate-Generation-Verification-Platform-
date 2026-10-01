@@ -81,19 +81,43 @@ export function LoginPage() {
       setLoading(true);
       setError(null);
       try {
+        let email: string | undefined;
+        let first_name: string | undefined;
+        let last_name: string | undefined;
+
+        try {
+          const gRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+          });
+          if (gRes.ok) {
+            const gData = await gRes.json();
+            email = gData.email;
+            first_name = gData.given_name;
+            last_name = gData.family_name;
+          }
+        } catch (fetchErr) {
+          console.warn('Frontend Google userinfo fetch fallback:', fetchErr);
+        }
+
         await authService.oauthLogin({
           token: tokenResponse.access_token,
+          email,
+          first_name,
+          last_name,
           provider: 'google',
           role: selectedRole,
         });
         navigate('/dashboard');
       } catch (err: any) {
-        setError(err.response?.data?.error || 'Google login failed.');
+        setError(err.response?.data?.error || err.response?.data?.detail || err.message || 'Google login failed.');
       } finally {
         setLoading(false);
       }
     },
-    onError: errorResponse => setError('Google login failed.'),
+    onError: (errorResponse) => {
+      console.error('Google OAuth popup error:', errorResponse);
+      setError('Google popup authentication failed.');
+    },
   });
 
   return (

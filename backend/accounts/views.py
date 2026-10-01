@@ -60,7 +60,14 @@ def login_view(request):
             u.is_staff = False
             u.save()
 
-        user = authenticate(email=email, password=password)
+        user = authenticate(request=request, email=email, password=password)
+        if not user:
+            user = authenticate(request=request, username=email, password=password)
+        if not user:
+            # Direct check fallback for custom user model
+            candidate = User.objects.filter(email=email).first()
+            if candidate and candidate.check_password(password):
+                user = candidate
         
         if user and user.is_active:
             # If the user specified a portal role, check match
@@ -103,11 +110,11 @@ def oauth_login_view(request):
 
     if provider == 'google' and token:
         try:
-            # 1. Try verifying as access_token via userinfo
+            # 1. Try verifying as access_token via userinfo (headers only as per RFC 6750)
             response = requests.get(
-                f'https://www.googleapis.com/oauth2/v3/userinfo?access_token={token}',
+                'https://www.googleapis.com/oauth2/v3/userinfo',
                 headers={'Authorization': f'Bearer {token}'},
-                timeout=5
+                timeout=10
             )
             if response.status_code == 200:
                 google_data = response.json()
@@ -115,18 +122,25 @@ def oauth_login_view(request):
                 first_name = google_data.get('given_name', '') or first_name
                 last_name = google_data.get('family_name', '') or last_name
             else:
-                # 2. Try verifying as id_token via tokeninfo
+                # 2. Try verifying as access_token via tokeninfo
                 token_res = requests.get(
-                    f'https://oauth2.googleapis.com/tokeninfo?id_token={token}',
-                    timeout=5
+                    f'https://oauth2.googleapis.com/tokeninfo?access_token={token}',
+                    timeout=10
                 )
                 if token_res.status_code == 200:
                     g_data = token_res.json()
                     email = g_data.get('email') or email
-                    first_name = g_data.get('given_name', '') or first_name
-                    last_name = g_data.get('family_name', '') or last_name
-                elif not email:
-                    return Response({'error': 'Invalid Google OAuth token provided.'}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    # 3. Try verifying as id_token via tokeninfo
+                    id_res = requests.get(
+                        f'https://oauth2.googleapis.com/tokeninfo?id_token={token}',
+                        timeout=10
+                    )
+                    if id_res.status_code == 200:
+                        id_data = id_res.json()
+                        email = id_data.get('email') or email
+                        first_name = id_data.get('given_name', '') or first_name
+                        last_name = id_data.get('family_name', '') or last_name
         except Exception as e:
             if not email:
                 return Response({'error': f'Failed to verify Google token: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
