@@ -17,7 +17,7 @@ def run_tests():
     print("Starting API Integration Tests...\n")
     
     # 1. Register a new user
-    username = f"mentor_{int(time.time())}"
+    username = f"admin_{int(time.time())}"
     email = f"{username}@example.com"
     password = "password123"
     
@@ -25,7 +25,8 @@ def run_tests():
         "email": email,
         "username": username,
         "first_name": "Test",
-        "last_name": "Mentor",
+        "last_name": "Admin",
+        "role": "ADMIN",
         "password": password,
         "password_confirm": password
     }
