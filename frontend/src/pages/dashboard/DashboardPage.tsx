@@ -22,8 +22,27 @@ import {
   GraduationCap,
   Shield,
   Lock,
-  Info
+  Info,
+  Unlock,
+  Eye,
+  BarChart3,
+  Globe,
+  Clock,
+  FolderPlus,
+  Activity
 } from 'lucide-react';
+import { analyticsService, type AdminAnalyticsData } from '@/services/analytics.service';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/form';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/modal';
 import { certificatesService } from '@/services/certificates.service';
 import { templatesService } from '@/services/templates.service';
 import { categoriesService } from '@/services/categories.service';
@@ -50,6 +69,13 @@ export function DashboardPage() {
   const [recentCertificates, setRecentCertificates] = useState<Certificate[]>([]);
   const [nextId, setNextId] = useState<string>('CERT-2026-000001');
   const [loading, setLoading] = useState(true);
+  const [adminAnalytics, setAdminAnalytics] = useState<AdminAnalyticsData | null>(null);
+
+  // Category Quick-Create Modal state for Admin
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+  const [catSaving, setCatSaving] = useState(false);
 
   useEffect(() => {
     const user = authService.getCurrentUser();
@@ -60,24 +86,35 @@ export function DashboardPage() {
   const fetchDashboardData = async (user: UserType | null) => {
     try {
       setLoading(true);
-      const [certRes, tplRes, catRes, nextIdRes] = await Promise.allSettled([
+      const promises: Promise<any>[] = [
         certificatesService.getAll({ page: 1 }),
         templatesService.getAll(),
         categoriesService.getAll(),
         certificatesService.getNextNumber()
-      ]);
+      ];
+
+      if (user?.role === 'ADMIN') {
+        promises.push(analyticsService.getAdminAnalytics());
+      }
+
+      const results = await Promise.allSettled(promises);
+      const [certRes, tplRes, catRes, nextIdRes, analyticsRes] = results;
 
       const certs = certRes.status === 'fulfilled' ? certRes.value.results || [] : [];
       const templates = tplRes.status === 'fulfilled' ? tplRes.value.results || [] : [];
       const categories = catRes.status === 'fulfilled' ? catRes.value.results || [] : [];
       const nextNum = nextIdRes.status === 'fulfilled' ? nextIdRes.value.next_number : 'CERT-2026-000001';
 
-      const validCount = certs.filter(c => c.status === 'VALID').length;
+      if (analyticsRes && analyticsRes.status === 'fulfilled') {
+        setAdminAnalytics(analyticsRes.value);
+      }
+
+      const validCount = (certs as Certificate[]).filter((c: Certificate) => c.status === 'VALID').length;
       
       // Filter for mentor: certificates issued by this user
       const myCerts = user?.id 
-        ? certs.filter(c => c.issued_by === user.id) 
-        : certs;
+        ? (certs as Certificate[]).filter((c: Certificate) => c.issued_by === user.id) 
+        : (certs as Certificate[]);
 
       setStats({
         totalCertificates: certs.length,
@@ -93,6 +130,23 @@ export function DashboardPage() {
       console.error('Failed to load dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    setCatSaving(true);
+    try {
+      await categoriesService.create({ name: newCatName.trim(), description: newCatDesc.trim() });
+      setIsCategoryModalOpen(false);
+      setNewCatName('');
+      setNewCatDesc('');
+      await fetchDashboardData(currentUser);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to create category');
+    } finally {
+      setCatSaving(false);
     }
   };
 
@@ -483,6 +537,397 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 4. ADMIN-ONLY ADVANCED ANALYTICS & GOVERNANCE */}
+      {isAdmin && adminAnalytics && (
+        <div className="space-y-8 pt-4 border-t border-slate-200">
+          {/* A. WEBSITE TRAFFIC & VISITOR TELEMETRY */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-100 text-sky-800 border border-sky-200 mb-1">
+                  <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                  Live Telemetry
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <Globe className="w-6 h-6 text-sky-600" />
+                  Website Traffic & Visitor Analytics
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Audited telemetry recording page views, unique visitors, and activity windows
+                </p>
+              </div>
+              <Badge variant="outline" className="text-xs font-mono bg-slate-50 text-slate-600 border-slate-300 py-1 px-3 self-start sm:self-auto">
+                Automatic IP Telemetry Enabled
+              </Badge>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="border-slate-200/80 shadow-xs hover:shadow-md transition-shadow bg-gradient-to-br from-white to-sky-50/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Website Visits</span>
+                    <div className="p-2.5 rounded-xl bg-sky-100 text-sky-700">
+                      <Globe className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-sky-900">{adminAnalytics.total_visits}</span>
+                    <span className="text-xs font-semibold text-sky-700">total views</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Total page navigations tracked</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200/80 shadow-xs hover:shadow-md transition-shadow bg-gradient-to-br from-white to-indigo-50/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Unique Visitors</span>
+                    <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-700">
+                      <Users className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-indigo-900">{adminAnalytics.unique_visitors}</span>
+                    <span className="text-xs font-semibold text-indigo-700">distinct IPs</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Individual visitors across network</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200/80 shadow-xs hover:shadow-md transition-shadow bg-gradient-to-br from-white to-emerald-50/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Last 24 Hours</span>
+                    <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700">
+                      <Clock className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-emerald-900">{adminAnalytics.visits_last_24h}</span>
+                    <span className="text-xs font-semibold text-emerald-700">today</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Visits within the past 24 hours</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-slate-200/80 shadow-xs hover:shadow-md transition-shadow bg-gradient-to-br from-white to-violet-50/30">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Last 7 Days</span>
+                    <div className="p-2.5 rounded-xl bg-violet-100 text-violet-700">
+                      <Activity className="h-5 w-5" />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-violet-900">{adminAnalytics.visits_last_7d}</span>
+                    <span className="text-xs font-semibold text-violet-700">weekly</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">Cumulative weekly engagement</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* B. TEMPLATE USAGE & POPULARITY RANKING */}
+          <Card className="border-slate-200/80 shadow-xs">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-indigo-600" />
+                  Template Usage & Adoption Ranking
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Track how many people are using each certificate template across the organization
+                </CardDescription>
+              </div>
+              <Link to="/templates">
+                <Button variant="outline" size="sm" className="text-xs font-semibold">
+                  Manage Templates ({adminAnalytics.template_usage.length})
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                      <th className="py-3 px-6">Template Design</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Access Level</th>
+                      <th className="py-3 px-4">Usage & Popularity</th>
+                      <th className="py-3 px-4 text-center">Certificates Issued</th>
+                      <th className="py-3 px-6 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {adminAnalytics.template_usage.map((tpl) => {
+                      const totalCerts = adminAnalytics.total_certificates || 1;
+                      const percentage = Math.min(100, Math.round((tpl.usage_count / Math.max(1, totalCerts)) * 100));
+
+                      return (
+                        <tr key={tpl.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3.5 px-6">
+                            <div className="font-bold text-slate-900 text-sm">
+                              {tpl.name}
+                            </div>
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              ID: #{tpl.id}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-xs font-semibold text-slate-600">
+                            {tpl.category_name}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {tpl.is_private ? (
+                              <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-semibold gap-1 text-[11px]">
+                                <Lock className="w-3 h-3" />
+                                Private (Password Protected)
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold gap-1 text-[11px]">
+                                <Unlock className="w-3 h-3" />
+                                Public
+                              </Badge>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4 w-48">
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                                <span>{tpl.usage_count} uses</span>
+                                <span>{percentage}%</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-sky-500 to-indigo-600 rounded-full transition-all"
+                                  style={{ width: `${Math.max(percentage, tpl.usage_count > 0 ? 8 : 2)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-center">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs">
+                              <Award className="w-3.5 h-3.5 text-indigo-600" />
+                              {tpl.usage_count}
+                            </span>
+                          </td>
+
+                          <td className="py-3.5 px-6 text-right">
+                            <Link to={`/certificates/create?template=${tpl.id}`}>
+                              <Button size="sm" variant="outline" className="h-8 text-xs font-semibold hover:bg-sky-50 hover:text-sky-700 hover:border-sky-300">
+                                Use Template
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* C. REGISTERED USER DIRECTORY & ACTIVITY SUMMARY */}
+          <Card className="border-slate-200/80 shadow-xs">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-sky-600" />
+                  User Accounts & Activity Directory
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Detailed ledger of all registered accounts, roles, and credential issuance counts
+                </CardDescription>
+              </div>
+              <Link to="/users">
+                <Button variant="outline" size="sm" className="text-xs font-semibold gap-1">
+                  Full User Governance
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/70 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                      <th className="py-3 px-6">User Name</th>
+                      <th className="py-3 px-4">Email</th>
+                      <th className="py-3 px-4">Role</th>
+                      <th className="py-3 px-4 text-center">Certificates Issued</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-6">Date Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {adminAnalytics.users.map((usr) => {
+                      const name = `${usr.first_name || ''} ${usr.last_name || ''}`.trim() || usr.username;
+                      const dateStr = usr.date_joined 
+                        ? new Date(usr.date_joined).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                        : '—';
+
+                      return (
+                        <tr key={usr.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="py-3 px-6">
+                            <div className="font-bold text-slate-900">{name}</div>
+                            <span className="text-xs font-mono text-slate-400">@{usr.username}</span>
+                          </td>
+                          <td className="py-3 px-4 text-xs font-mono text-slate-600">
+                            {usr.email}
+                          </td>
+                          <td className="py-3 px-4">
+                            {usr.role === 'ADMIN' ? (
+                              <Badge className="bg-sky-50 text-sky-700 border-sky-200 text-xs font-semibold">
+                                <Shield className="w-3 h-3 mr-1" />
+                                ADMIN
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-violet-50 text-violet-700 border-violet-200 text-xs font-semibold">
+                                <GraduationCap className="w-3 h-3 mr-1" />
+                                MENTOR
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-center font-bold text-xs text-slate-800">
+                            <span className="px-2.5 py-1 rounded-md bg-slate-100">
+                              {usr.certificates_count ?? 0}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {usr.is_active ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                Active
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+                                <XCircle className="w-3.5 h-3.5" />
+                                Inactive
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-6 text-xs text-slate-500">
+                            {dateStr}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* D. CATEGORY QUICK MANAGEMENT & CREATOR */}
+          <Card className="border-slate-200/80 shadow-xs">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <FolderTree className="w-5 h-5 text-violet-600" />
+                  Category Management
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Create and organize certificate disciplines and domain classifications
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={() => setIsCategoryModalOpen(true)}
+                  className="bg-violet-600 hover:bg-violet-700 text-white font-bold gap-1 text-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Category
+                </Button>
+                <Link to="/categories">
+                  <Button variant="outline" size="sm" className="text-xs font-semibold">
+                    Manage All
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {adminAnalytics.categories.map((cat) => (
+                  <div key={cat.id} className="p-4 rounded-xl border border-slate-200 bg-white hover:border-violet-300 hover:shadow-xs transition-all">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-sm text-slate-900 truncate">
+                        {cat.name}
+                      </span>
+                      <Badge variant="outline" className="text-[10px] bg-violet-50 text-violet-700 border-violet-200">
+                        {cat.templates_count} templates
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {cat.description || 'No description provided.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* QUICK CATEGORY CREATION MODAL */}
+      <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <FolderPlus className="w-5 h-5 text-violet-600" />
+              Create Certificate Category
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Add a new category domain to group and organize certificates and templates.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateCategory} className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="catName" className="text-xs font-semibold text-slate-700">
+                Category Name *
+              </Label>
+              <Input
+                id="catName"
+                placeholder="e.g. Artificial Intelligence, Cloud Architecture"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                required
+                className="text-sm"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="catDesc" className="text-xs font-semibold text-slate-700">
+                Description (Optional)
+              </Label>
+              <Input
+                id="catDesc"
+                placeholder="Brief description of certifications under this domain"
+                value={newCatDesc}
+                onChange={(e) => setNewCatDesc(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" size="sm">
+                  Cancel
+                </Button>
+              </DialogClose>
+              <Button type="submit" size="sm" disabled={catSaving || !newCatName.trim()} className="bg-violet-600 hover:bg-violet-700 text-white font-semibold">
+                {catSaving ? 'Creating...' : 'Create Category'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

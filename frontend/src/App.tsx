@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthLayout } from './layouts/AuthLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
@@ -6,12 +7,14 @@ import { RegisterPage } from './pages/login/RegisterPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { TemplatesPage } from './pages/templates/TemplatesPage';
 import { CategoriesPage } from './pages/categories/CategoriesPage';
+import { UsersPage } from './pages/users/UsersPage';
 import { CertificatesListPage } from './pages/certificates/CertificatesListPage';
 import { CertificatesCreatePage } from './pages/certificates/CertificatesCreatePage';
 import { VerifyPage } from './pages/verify/VerifyPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { CertiGenAIAssistant } from './components/assistant/CertiGenAIAssistant';
 import { authService } from './services/auth.service';
+import { analyticsService } from './services/analytics.service';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -42,6 +45,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  useEffect(() => {
+    analyticsService.recordVisit(window.location.pathname);
+  }, []);
+
   return (
     <BrowserRouter>
       {/* Global Omnipresent RAG Assistant */}
@@ -74,7 +81,16 @@ function App() {
         }>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/templates" element={<TemplatesPage />} />
-          <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/categories" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <CategoriesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/users" element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <UsersPage />
+            </ProtectedRoute>
+          } />
           <Route path="/certificates" element={<CertificatesListPage />} />
           <Route path="/certificates/create" element={<CertificatesCreatePage />} />
           <Route path="/profile" element={<ProfilePage />} />

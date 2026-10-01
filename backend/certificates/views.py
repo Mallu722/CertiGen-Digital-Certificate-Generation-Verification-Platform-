@@ -64,7 +64,17 @@ class CertificateViewSet(viewsets.ModelViewSet):
             if template.access_password and provided_pass.strip() != template.access_password.strip():
                 from rest_framework.exceptions import PermissionDenied
                 raise PermissionDenied('This template is private and requires a valid access password set by an Administrator.')
-        serializer.save(issued_by=self.request.user)
+        cert = serializer.save(issued_by=self.request.user)
+
+        # Automatically send certificate to recipient's email if provided
+        if cert.recipient_email:
+            try:
+                from .bulk_service import send_certificate_email
+                base_url = self.request.META.get('HTTP_ORIGIN') or getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+                pdf_bytes = generate_certificate_pdf(cert, base_url=base_url)
+                send_certificate_email(cert, pdf_bytes, base_url=base_url)
+            except Exception as e:
+                print(f"[CertiGen Email Delivery Notice] {e}")
 
 
     @action(detail=False, methods=['get'], url_path='next-id')
