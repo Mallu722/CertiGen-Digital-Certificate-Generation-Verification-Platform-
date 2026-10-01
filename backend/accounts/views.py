@@ -134,25 +134,34 @@ def oauth_login_view(request):
     if not email:
         return Response({'error': 'Email is required for OAuth authentication.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not username:
-        base_username = email.split('@')[0].replace('.', '_').replace('-', '_')
-        username = f"{base_username}_{provider}"
-
     user = User.objects.filter(email=email).first()
     if not user:
-        # Create new user with selected role
-        is_admin = (selected_role == 'ADMIN')
-        user = User.objects.create_user(
-            email=email,
-            username=username,
-            first_name=first_name or f"{provider.capitalize()} User",
-            last_name=last_name or '',
-            role=selected_role,
-            is_staff=is_admin,
-            is_superuser=is_admin
-        )
-        user.set_unusable_password()
-        user.save()
+        if not username:
+            base_username = email.split('@')[0].replace('.', '_').replace('-', '_')
+            username = f"{base_username}_{provider}"
+
+        # Collision-proof username generation
+        base_candidate = username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_candidate}_{counter}"
+            counter += 1
+
+        try:
+            is_admin = (selected_role == 'ADMIN')
+            user = User.objects.create_user(
+                email=email,
+                username=username,
+                first_name=first_name or f"{provider.capitalize()} User",
+                last_name=last_name or '',
+                role=selected_role,
+                is_staff=is_admin,
+                is_superuser=is_admin
+            )
+            user.set_unusable_password()
+            user.save()
+        except Exception as e:
+            return Response({'error': f'Failed to create user account: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         # Ensure user role aligns with the selected portal role
         if selected_role and user.role != selected_role:

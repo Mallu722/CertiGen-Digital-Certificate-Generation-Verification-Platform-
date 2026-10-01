@@ -61,10 +61,24 @@ export function RegisterPage() {
         first_name: data.first_name,
         last_name: data.last_name,
         password: data.password,
+        password_confirm: data.password_confirm,
       });
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.response?.data?.error || 'Registration failed');
+      const dataErrors = err.response?.data;
+      let errMsg = 'Registration failed. Please check your details.';
+      if (typeof dataErrors === 'string') {
+        errMsg = dataErrors;
+      } else if (dataErrors?.detail || dataErrors?.error) {
+        errMsg = dataErrors.detail || dataErrors.error;
+      } else if (dataErrors && typeof dataErrors === 'object') {
+        const firstKey = Object.keys(dataErrors)[0];
+        if (firstKey) {
+          const val = dataErrors[firstKey];
+          errMsg = `${firstKey}: ${Array.isArray(val) ? val.join(', ') : val}`;
+        }
+      }
+      setError(errMsg);
     } finally {
       setLoading(false);
     }

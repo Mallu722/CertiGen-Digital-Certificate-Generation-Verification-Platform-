@@ -12,7 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserRegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8, style={'input_type': 'password'})
-    password_confirm = serializers.CharField(write_only=True, style={'input_type': 'password'})
+    password_confirm = serializers.CharField(write_only=True, required=False, style={'input_type': 'password'})
     role = serializers.CharField(required=False, default='MENTOR')
 
     class Meta:
@@ -20,12 +20,13 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         fields = ['email', 'username', 'first_name', 'last_name', 'role', 'password', 'password_confirm']
 
     def validate(self, data):
-        if data['password'] != data['password_confirm']:
+        password_confirm = data.get('password_confirm')
+        if password_confirm and data.get('password') != password_confirm:
             raise serializers.ValidationError({"password_confirm": "Passwords do not match"})
         return data
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
+        validated_data.pop('password_confirm', None)
         role = validated_data.get('role', 'MENTOR').upper()
         is_admin = (role == 'ADMIN')
         user = User.objects.create_user(

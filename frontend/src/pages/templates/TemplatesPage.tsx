@@ -5,35 +5,35 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/form';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose
 } from '@/components/ui/modal';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
-import { 
-  Search, 
-  Plus, 
-  FileCheck, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Check, 
+import {
+  Search,
+  Plus,
+  FileCheck,
+  Edit,
+  Trash2,
+  Eye,
+  Check,
   X,
   AlertCircle,
   FolderOpen,
   Award,
-  Lock, 
+  Lock,
   Unlock,
   KeyRound,
   Globe,
@@ -55,7 +55,7 @@ export function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [search, setSearch] = useState('');
-  
+
   useEffect(() => {
     setIsAdmin(authService.isAdmin());
   }, []);
@@ -325,12 +325,12 @@ export function TemplatesPage() {
             </Badge>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            {isAdmin 
+            {isAdmin
               ? 'Manage public and private certificate templates, set access passwords, and design themes.'
               : 'Browse and use purpose-built templates to issue verified digital credentials.'}
           </p>
         </div>
-        
+
         {/* Admin only action */}
         {isAdmin && (
           <Button onClick={handleOpenCreate} className="shadow-sm">
@@ -375,37 +375,37 @@ export function TemplatesPage() {
                   <Card key={template.id} className="overflow-hidden flex flex-col justify-between group border border-slate-200 hover:shadow-md transition-all duration-200">
                     <div>
                       {/* Header Preview Canvas */}
-                      <div 
+                      <div
                         className="h-44 flex flex-col items-center justify-center relative overflow-hidden border-b p-3 text-center"
-                        style={{ 
+                        style={{
                           backgroundColor: '#fafaf9',
                           borderColor: template.secondary_color || '#c59b27'
                         }}
                       >
                         {template.image_url ? (
-                          <img 
-                            src={getImageUrl(template.image_url)} 
-                            alt={template.name} 
+                          <img
+                            src={getImageUrl(template.image_url)}
+                            alt={template.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
-                          <div 
+                          <div
                             className="w-full h-full rounded-xl border-2 border-dashed p-3 flex flex-col items-center justify-center relative bg-white/80 shadow-2xs"
                             style={{ borderColor: template.primary_color || '#0f2744' }}
                           >
-                            <span 
+                            <span
                               className="text-[9px] font-black uppercase tracking-widest"
                               style={{ color: template.secondary_color || '#c59b27' }}
                             >
                               {template.badge_text || 'CERTIGEN VERIFIED CREDENTIAL'}
                             </span>
-                            <h4 
+                            <h4
                               className="text-xs font-black uppercase tracking-tight mt-1 line-clamp-1 font-serif"
                               style={{ color: template.primary_color || '#0f2744' }}
                             >
                               {template.title_prefix || 'CERTIFICATE OF'} {template.subtitle || 'HONOR'}
                             </h4>
-                            <div 
+                            <div
                               className="w-10 h-0.5 my-1"
                               style={{ backgroundColor: template.secondary_color || '#c59b27' }}
                             />
@@ -417,7 +417,7 @@ export function TemplatesPage() {
                             </span>
                           </div>
                         )}
-                        
+
                         {/* Top-Left: Public vs Private Badge */}
                         <div className="absolute top-2.5 left-2.5">
                           {template.is_private ? (
@@ -435,25 +435,23 @@ export function TemplatesPage() {
 
                         {/* Top-Right: Active toggle (Admin only, read-only for mentor) */}
                         {isAdmin ? (
-                          <button 
+                          <button
                             onClick={() => handleToggleStatus(template)}
-                            className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-xs flex items-center gap-1 border transition-all ${
-                              template.is_active 
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                            className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-xs flex items-center gap-1 border transition-all ${template.is_active
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                 : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                            }`}
+                              }`}
                             title="Click to toggle active status"
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${template.is_active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                             {template.is_active ? 'Active' : 'Inactive'}
                           </button>
                         ) : (
-                          <span 
-                            className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-xs flex items-center gap-1 border ${
-                              template.is_active 
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                          <span
+                            className={`absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-xs flex items-center gap-1 border ${template.is_active
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : 'bg-slate-100 text-slate-600 border-slate-200'
-                            }`}
+                              }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${template.is_active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                             {template.is_active ? 'Active' : 'Inactive'}
@@ -504,11 +502,10 @@ export function TemplatesPage() {
                       <Button
                         size="sm"
                         onClick={() => handlePromptUnlock(template, 'issue')}
-                        className={`h-8 text-xs font-bold gap-1 shadow-xs ${
-                          isLocked 
+                        className={`h-8 text-xs font-bold gap-1 shadow-xs ${isLocked
                             ? 'bg-amber-600 hover:bg-amber-500 text-white'
                             : 'bg-sky-600 hover:bg-sky-500 text-white'
-                        }`}
+                          }`}
                       >
                         {isLocked ? (
                           <>
@@ -524,10 +521,10 @@ export function TemplatesPage() {
                       </Button>
 
                       <div className="flex items-center gap-1">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-100" 
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs text-slate-700 hover:bg-slate-100"
                           title="Preview Template"
                           onClick={() => handlePromptUnlock(template, 'preview')}
                         >
@@ -537,19 +534,19 @@ export function TemplatesPage() {
 
                         {isAdmin && (
                           <>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-sky-600 hover:bg-sky-50" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-sky-600 hover:bg-sky-50"
                               title="Edit"
                               onClick={() => handleOpenEdit(template)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
                               title="Delete"
                               onClick={() => handleOpenDelete(template)}
                             >
@@ -570,7 +567,7 @@ export function TemplatesPage() {
               <FileCheck className="mx-auto h-16 w-16 text-slate-300" />
               <h3 className="mt-4 text-lg font-semibold text-slate-900">No templates found</h3>
               <p className="mt-2 text-sm text-slate-500 max-w-sm mx-auto">
-                {isAdmin 
+                {isAdmin
                   ? 'Create a new certificate template to start issuing customized digital credentials.'
                   : 'No templates have been configured yet. Please contact an Administrator.'}
               </p>
@@ -628,15 +625,15 @@ export function TemplatesPage() {
             </div>
 
             <DialogFooter className="grid grid-cols-2 gap-2 pt-2">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setUnlockModalOpen(false)}
               >
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={unlockLoading}
                 className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
               >
@@ -669,22 +666,22 @@ export function TemplatesPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-1">
                 <Label htmlFor="create-name">Template Name <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="create-name"
-                  placeholder="e.g. VIP Honor Certificate" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
+                  placeholder="e.g. VIP Honor Certificate"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1">
                 <Label htmlFor="create-description">Description / Purpose</Label>
-                <textarea 
+                <textarea
                   id="create-description"
-                  placeholder="Describe the purpose of this certificate..." 
+                  placeholder="Describe the purpose of this certificate..."
                   className="flex min-h-[70px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                  value={description} 
-                  onChange={(e) => setDescription(e.target.value)} 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
 
@@ -710,11 +707,10 @@ export function TemplatesPage() {
                   Template Access Permission (Public / Private)
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  <div 
+                  <div
                     onClick={() => setIsPrivate(false)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${
-                      !isPrivate ? 'border-sky-600 bg-sky-50/50 shadow-xs ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${!isPrivate ? 'border-sky-600 bg-sky-50/50 shadow-xs ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
                   >
                     <Globe className="w-4 h-4 text-sky-600 shrink-0" />
                     <div>
@@ -723,11 +719,10 @@ export function TemplatesPage() {
                     </div>
                   </div>
 
-                  <div 
+                  <div
                     onClick={() => setIsPrivate(true)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${
-                      isPrivate ? 'border-amber-600 bg-amber-50/50 shadow-xs ring-1 ring-amber-400' : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${isPrivate ? 'border-amber-600 bg-amber-50/50 shadow-xs ring-1 ring-amber-400' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
                   >
                     <Lock className="w-4 h-4 text-amber-600 shrink-0" />
                     <div>
@@ -761,9 +756,9 @@ export function TemplatesPage() {
 
               <div className="space-y-1 pt-2 border-t border-slate-100">
                 <Label htmlFor="create-image">Custom Background (Optional)</Label>
-                <Input 
+                <Input
                   id="create-image"
-                  type="file" 
+                  type="file"
                   accept="image/*"
                   onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
                   ref={fileInputRef}
@@ -771,10 +766,10 @@ export function TemplatesPage() {
               </div>
 
               <div className="flex items-center gap-2 pt-2">
-                <input 
-                  type="checkbox" 
-                  id="create-active" 
-                  checked={isActive} 
+                <input
+                  type="checkbox"
+                  id="create-active"
+                  checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
                   className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                 />
@@ -815,20 +810,20 @@ export function TemplatesPage() {
             <div className="space-y-4 py-4">
               <div className="space-y-1">
                 <Label htmlFor="edit-name">Template Name <span className="text-red-500">*</span></Label>
-                <Input 
+                <Input
                   id="edit-name"
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)} 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
               </div>
 
               <div className="space-y-1">
                 <Label htmlFor="edit-description">Description</Label>
-                <textarea 
+                <textarea
                   id="edit-description"
                   className="flex min-h-[70px] w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                  value={description} 
-                  onChange={(e) => setDescription(e.target.value)} 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
 
@@ -854,11 +849,10 @@ export function TemplatesPage() {
                   Template Access Permission (Public / Private)
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
-                  <div 
+                  <div
                     onClick={() => setIsPrivate(false)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${
-                      !isPrivate ? 'border-sky-600 bg-sky-50/50 shadow-xs ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${!isPrivate ? 'border-sky-600 bg-sky-50/50 shadow-xs ring-1 ring-sky-400' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
                   >
                     <Globe className="w-4 h-4 text-sky-600 shrink-0" />
                     <div>
@@ -867,11 +861,10 @@ export function TemplatesPage() {
                     </div>
                   </div>
 
-                  <div 
+                  <div
                     onClick={() => setIsPrivate(true)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${
-                      isPrivate ? 'border-amber-600 bg-amber-50/50 shadow-xs ring-1 ring-amber-400' : 'border-slate-200 bg-white hover:border-slate-300'
-                    }`}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex items-center gap-2.5 ${isPrivate ? 'border-amber-600 bg-amber-50/50 shadow-xs ring-1 ring-amber-400' : 'border-slate-200 bg-white hover:border-slate-300'
+                      }`}
                   >
                     <Lock className="w-4 h-4 text-amber-600 shrink-0" />
                     <div>
@@ -904,9 +897,9 @@ export function TemplatesPage() {
 
               <div className="space-y-1 pt-2 border-t border-slate-100">
                 <Label htmlFor="edit-image">Replace Template Image (Optional)</Label>
-                <Input 
+                <Input
                   id="edit-image"
-                  type="file" 
+                  type="file"
                   accept="image/*"
                   onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
                   ref={fileInputRef}
@@ -914,10 +907,10 @@ export function TemplatesPage() {
               </div>
 
               <div className="flex items-center gap-2 pt-2">
-                <input 
-                  type="checkbox" 
-                  id="edit-active" 
-                  checked={isActive} 
+                <input
+                  type="checkbox"
+                  id="edit-active"
+                  checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
                   className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                 />
@@ -997,11 +990,10 @@ export function TemplatesPage() {
                     <button
                       key={theme.id}
                       onClick={() => setPreviewColorTheme(theme)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${
-                        previewColorTheme.id === theme.id 
-                          ? 'bg-white border-slate-900 shadow-sm ring-1 ring-slate-900 text-slate-900' 
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-2 border transition-all ${previewColorTheme.id === theme.id
+                          ? 'bg-white border-slate-900 shadow-sm ring-1 ring-slate-900 text-slate-900'
                           : 'bg-white/80 border-slate-200 text-slate-600 hover:bg-white hover:border-slate-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center -space-x-1">
                         <span className="w-3 h-3 rounded-full border border-white" style={{ backgroundColor: theme.primary }} />
@@ -1023,18 +1015,18 @@ export function TemplatesPage() {
                   resolvedWording={
                     selectedTemplate.wording_pattern
                       ? selectedTemplate.wording_pattern
-                          .replace(/{{STUDENT_NAME}}/g, 'MALLIKARJUN HIREMATH')
-                          .replace(/{{NAME}}/g, 'MALLIKARJUN HIREMATH')
-                          .replace(/{{EVENT_NAME}}/g, 'National Innovation & AI Hackathon 2026')
-                          .replace(/{{COURSE_NAME}}/g, 'Full-Stack Software Engineering')
-                          .replace(/{{ACHIEVEMENT}}/g, 'First Place Distinction')
-                          .replace(/{{ORGANIZATION_NAME}}/g, 'CertiGen Institute of Technology')
-                          .replace(/{{RANK}}/g, '1st Place')
-                          .replace(/{{DURATION}}/g, '8 Weeks')
-                          .replace(/{{INSTRUCTOR}}/g, 'Prof. Alan Turing')
-                          .replace(/{{TEAM_NAME}}/g, 'CodeCrafters')
-                          .replace(/{{ROLE}}/g, 'Software Engineer Intern')
-                          .replace(/{{HOURS}}/g, '60')
+                        .replace(/{{STUDENT_NAME}}/g, 'MALLIKARJUN HIREMATH')
+                        .replace(/{{NAME}}/g, 'MALLIKARJUN HIREMATH')
+                        .replace(/{{EVENT_NAME}}/g, 'National Innovation & AI Hackathon 2026')
+                        .replace(/{{COURSE_NAME}}/g, 'Full-Stack Software Engineering')
+                        .replace(/{{ACHIEVEMENT}}/g, 'First Place Distinction')
+                        .replace(/{{ORGANIZATION_NAME}}/g, 'CertiGen Institute of Technology')
+                        .replace(/{{RANK}}/g, '1st Place')
+                        .replace(/{{DURATION}}/g, '8 Weeks')
+                        .replace(/{{INSTRUCTOR}}/g, 'Prof. Alan Turing')
+                        .replace(/{{TEAM_NAME}}/g, 'CodeCrafters')
+                        .replace(/{{ROLE}}/g, 'Software Engineer Intern')
+                        .replace(/{{HOURS}}/g, '60')
                       : 'for demonstrating exceptional distinction, perseverance, and scholastic excellence in National Innovation & AI Hackathon 2026'
                   }
                   badgeText={selectedTemplate.badge_text || 'EXCELLENCE AWARD'}
@@ -1079,7 +1071,7 @@ export function TemplatesPage() {
               </Button>
             </DialogClose>
             {selectedTemplate && (
-              <Button 
+              <Button
                 onClick={() => handlePromptUnlock(selectedTemplate, 'issue')}
                 className="w-full sm:w-auto bg-sky-600 hover:bg-sky-500 font-bold gap-2 text-white shadow-md shadow-sky-600/20"
               >
@@ -1111,9 +1103,9 @@ export function TemplatesPage() {
             <DialogClose asChild>
               <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
-              type="button" 
-              variant="destructive" 
+            <Button
+              type="button"
+              variant="destructive"
               onClick={handleDeleteConfirm}
               isLoading={submitLoading}
               disabled={submitLoading}
