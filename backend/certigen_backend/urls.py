@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from certigen_backend.views import health_check
+from certigen_backend.views import health_check, record_visit, admin_analytics_view
 from rest_framework.routers import DefaultRouter
 from accounts import views as account_views
 from categories import views as category_views
@@ -45,6 +45,10 @@ urlpatterns = [
 
     # Verification endpoint
     path('api/verify/<str:certificate_id>/', certificate_views.CertificateViewSet.as_view({'get': 'verify'}), name='verify-certificate'),
+    
+    # Analytics & Traffic
+    path('api/analytics/visit/', record_visit, name='record-visit'),
+    path('api/analytics/admin/', admin_analytics_view, name='admin-analytics'),
     
     # AI Assistant & Knowledge Base
     path('api/assistant/', include('assistant.urls')),

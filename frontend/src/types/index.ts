@@ -5,6 +5,9 @@ export interface User {
   last_name: string;
   username: string;
   role: Role;
+  is_active?: boolean;
+  date_joined?: string;
+  certificates_count?: number;
   created_at: string;
   updated_at: string;
 }

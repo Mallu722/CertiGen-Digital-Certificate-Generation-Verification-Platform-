@@ -98,7 +98,9 @@ TEMPLATES_DATA = [
         "primary_color": "#4c1d95",  # Deep Violet
         "secondary_color": "#eab308",  # Electric Amber
         "accent_color": "#ddd6fe",
-        "badge_text": "TOP PERFORMER"
+        "badge_text": "TOP PERFORMER",
+        "is_private": True,
+        "access_password": "VIP2026"
     },
     {
         "name": "Hackathon Certificate",
@@ -189,7 +191,9 @@ TEMPLATES_DATA = [
         "primary_color": "#581c87",  # Regal Purple
         "secondary_color": "#e11d48",  # Rose Gold
         "accent_color": "#fbcfe8",
-        "badge_text": "EXEMPLARY LEADER"
+        "badge_text": "EXEMPLARY LEADER",
+        "is_private": True,
+        "access_password": "LEADERSHIP2026"
     },
     {
         "name": "Academic Excellence Certificate",
@@ -228,7 +232,9 @@ def run_seed():
                 "secondary_color": item["secondary_color"],
                 "accent_color": item["accent_color"],
                 "badge_text": item["badge_text"],
-                "is_active": True
+                "is_active": True,
+                "is_private": item.get("is_private", False),
+                "access_password": item.get("access_password", "")
             }
         )
         status = "Created" if created else "Updated"

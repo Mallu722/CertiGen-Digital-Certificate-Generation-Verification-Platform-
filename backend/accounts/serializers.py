@@ -43,10 +43,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
 
 
 class UserAdminSerializer(serializers.ModelSerializer):
+    certificates_count = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'role', 'is_active', 'date_joined']
+        fields = ['id', 'email', 'username', 'first_name', 'last_name', 'role', 'is_active', 'date_joined', 'certificates_count']
         read_only_fields = ['id', 'date_joined']
+
+    def get_certificates_count(self, obj):
+        return obj.certificates.count() if hasattr(obj, 'certificates') else 0
 
 
 class LoginSerializer(serializers.Serializer):
