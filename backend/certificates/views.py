@@ -41,8 +41,16 @@ def get_certificate_by_identifier(identifier: str):
     return None
 
 
+from rest_framework.pagination import PageNumberPagination
+
+class CertificatePagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CertificateViewSet(viewsets.ModelViewSet):
-    queryset = Certificate.objects.all()
+    queryset = Certificate.objects.all().order_by('-issued_at')
+    pagination_class = CertificatePagination
     
     def get_serializer_class(self):
         if self.action in ['create', 'issue']:
@@ -50,6 +58,15 @@ class CertificateViewSet(viewsets.ModelViewSet):
         return CertificateSerializer
     
     permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        if Certificate.objects.count() == 0:
+            try:
+                from seed_12_templates import run_seed
+                run_seed()
+            except Exception as e:
+                print("Auto-seed error:", e)
+        return super().list(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.action in ['verify', 'pdf', 'download', 'qr', 'next_id']:

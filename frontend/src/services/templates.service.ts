@@ -2,8 +2,10 @@ import apiClient from '@/api/client';
 import type { Template, PaginatedResponse } from '@/types';
 
 export const templatesService = {
-  async getAll(params?: { page?: number; search?: string; category?: number }): Promise<PaginatedResponse<Template>> {
-    const response = await apiClient.get<PaginatedResponse<Template>>('/templates/', { params });
+  async getAll(params?: { page?: number; search?: string; category?: number; page_size?: number }): Promise<PaginatedResponse<Template>> {
+    const response = await apiClient.get<PaginatedResponse<Template>>('/templates/', {
+      params: { page_size: 50, ...params }
+    });
     return response.data;
   },
 
@@ -35,6 +37,11 @@ export const templatesService = {
 
   async unlock(id: string | number, password: string): Promise<{ status: string; message: string }> {
     const response = await apiClient.post<{ status: string; message: string }>(`/templates/${id}/unlock/`, { password });
+    return response.data;
+  },
+
+  async seed(): Promise<any> {
+    const response = await apiClient.post('/seed/');
     return response.data;
   }
 };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 import * as XLSX from 'xlsx';
@@ -50,7 +50,10 @@ import {
   Trash2,
   Plus,
   Send,
-  DownloadCloud
+  DownloadCloud,
+  PenLine,
+  MousePointer2,
+  RotateCcw
 } from 'lucide-react';
 import { templatesService } from '@/services/templates.service';
 import { certificatesService } from '@/services/certificates.service';
@@ -119,6 +122,22 @@ export function CertificatesCreatePage() {
   const [signatoryTitle, setSignatoryTitle] = useState('Dean of Academic Affairs');
   const [secondSignatoryName, setSecondSignatoryName] = useState('Prof. Vikram Singh');
   const [secondSignatoryTitle, setSecondSignatoryTitle] = useState('Director of Certification');
+
+  // Digital Signature Images (base64 data URLs from canvas draw or file upload)
+  const [sig1ImageUrl, setSig1ImageUrl] = useState<string>('');
+  const [sig2ImageUrl, setSig2ImageUrl] = useState<string>('');
+
+  // Signature pad draw mode tabs: 'draw' or 'upload'
+  const [sig1Mode, setSig1Mode] = useState<'draw' | 'upload'>('draw');
+  const [sig2Mode, setSig2Mode] = useState<'draw' | 'upload'>('draw');
+
+  // Canvas refs for signature pads
+  const sig1CanvasRef = useRef<HTMLCanvasElement>(null);
+  const sig2CanvasRef = useRef<HTMLCanvasElement>(null);
+  const sig1Drawing = useRef(false);
+  const sig2Drawing = useRef(false);
+  const sig1LastPos = useRef<{ x: number; y: number } | null>(null);
+  const sig2LastPos = useRef<{ x: number; y: number } | null>(null);
   
   const [rank, setRank] = useState('First Place (Rank 1)');
   const [duration, setDuration] = useState('8 Weeks (120 Hours)');
@@ -172,6 +191,85 @@ export function CertificatesCreatePage() {
     fetchNextId();
     loadTemplates();
   }, []);
+
+  // ==========================================
+  // SIGNATURE PAD DRAW HELPERS
+  // ==========================================
+
+  const getCanvasPos = (canvas: HTMLCanvasElement, e: React.MouseEvent | React.TouchEvent) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if ('touches' in e) {
+      const touch = e.touches[0];
+      return { x: (touch.clientX - rect.left) * scaleX, y: (touch.clientY - rect.top) * scaleY };
+    }
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  };
+
+  const startDraw = (which: 1 | 2, e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = which === 1 ? sig1CanvasRef.current : sig2CanvasRef.current;
+    if (!canvas) return;
+    const pos = getCanvasPos(canvas, e);
+    if (which === 1) { sig1Drawing.current = true; sig1LastPos.current = pos; }
+    else { sig2Drawing.current = true; sig2LastPos.current = pos; }
+  };
+
+  const draw = (which: 1 | 2, e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const canvas = which === 1 ? sig1CanvasRef.current : sig2CanvasRef.current;
+    const isDrawing = which === 1 ? sig1Drawing.current : sig2Drawing.current;
+    const lastPos = which === 1 ? sig1LastPos.current : sig2LastPos.current;
+    if (!canvas || !isDrawing || !lastPos) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const pos = getCanvasPos(canvas, e);
+    ctx.beginPath();
+    ctx.moveTo(lastPos.x, lastPos.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    if (which === 1) sig1LastPos.current = pos;
+    else sig2LastPos.current = pos;
+  };
+
+  const endDraw = (which: 1 | 2) => {
+    const canvas = which === 1 ? sig1CanvasRef.current : sig2CanvasRef.current;
+    if (which === 1) { sig1Drawing.current = false; sig1LastPos.current = null; }
+    else { sig2Drawing.current = false; sig2LastPos.current = null; }
+    // Save canvas to image URL
+    if (canvas) {
+      const dataUrl = canvas.toDataURL('image/png');
+      if (which === 1) setSig1ImageUrl(dataUrl);
+      else setSig2ImageUrl(dataUrl);
+    }
+  };
+
+  const clearCanvas = (which: 1 | 2) => {
+    const canvas = which === 1 ? sig1CanvasRef.current : sig2CanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (which === 1) setSig1ImageUrl('');
+    else setSig2ImageUrl('');
+  };
+
+  const handleSigUpload = (which: 1 | 2, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      if (which === 1) setSig1ImageUrl(result);
+      else setSig2ImageUrl(result);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const fetchNextId = async () => {
     try {
@@ -1467,65 +1565,231 @@ export function CertificatesCreatePage() {
               </Card>
 
               {/* Dual Signatures */}
-              <Card className="border-slate-200/80 shadow-xs">
-                <CardHeader className="pb-3 border-b border-slate-100">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-900">
-                    <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                    {issuanceMode === 'bulk' ? '4.' : '5.'} Dual Authorized Signatories
-                  </CardTitle>
+              <Card className="border-indigo-200/60 shadow-xs bg-gradient-to-b from-indigo-50/30 to-white">
+                <CardHeader className="pb-3 border-b border-indigo-100/60">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-900">
+                      <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                      {issuanceMode === 'bulk' ? '4.' : '5.'} Dual Authorized Signatories
+                    </CardTitle>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full border border-indigo-200 flex items-center gap-1">
+                      <PenLine className="w-3 h-3" /> Digital Signature
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Draw or upload a signature image for each authorized signatory — it will appear on the certificate.
+                  </p>
                 </CardHeader>
-                <CardContent className="p-4 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-700">
-                        Primary Signatory Name
-                      </Label>
-                      <Input
-                        value={signatoryName}
-                        onChange={e => setSignatoryName(e.target.value)}
-                        placeholder="e.g. Dr. Rajesh Kumar"
-                        className="text-sm"
-                      />
+                <CardContent className="p-4 space-y-5">
+
+                  {/* ---- PRIMARY SIGNATORY ---- */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">1</div>
+                      <span className="text-xs font-bold text-slate-800">Primary Signatory</span>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-700">
-                        Primary Signatory Title
-                      </Label>
-                      <Input
-                        value={signatoryTitle}
-                        onChange={e => setSignatoryTitle(e.target.value)}
-                        placeholder="e.g. Dean of Academic Affairs"
-                        className="text-sm"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
+                        <Input
+                          value={signatoryName}
+                          onChange={e => setSignatoryName(e.target.value)}
+                          placeholder="e.g. Dr. Rajesh Kumar"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-slate-700">Designation / Title</Label>
+                        <Input
+                          value={signatoryTitle}
+                          onChange={e => setSignatoryTitle(e.target.value)}
+                          placeholder="e.g. Dean of Academic Affairs"
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Signature Pad */}
+                    <div className="rounded-2xl border border-indigo-200/70 bg-white overflow-hidden">
+                      {/* Mode Tabs */}
+                      <div className="flex border-b border-slate-100 bg-slate-50/80">
+                        <button
+                          type="button"
+                          onClick={() => setSig1Mode('draw')}
+                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all border-r border-slate-100 ${sig1Mode === 'draw' ? 'bg-white text-indigo-700 border-b-2 border-b-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          <PenLine className="w-3.5 h-3.5" /> Draw Signature
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSig1Mode('upload')}
+                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all ${sig1Mode === 'upload' ? 'bg-white text-indigo-700 border-b-2 border-b-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          <Upload className="w-3.5 h-3.5" /> Upload Image
+                        </button>
+                        <div className="flex-1" />
+                        {sig1ImageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => { clearCanvas(1); setSig1ImageUrl(''); }}
+                            className="flex items-center gap-1 px-3 text-xs text-red-500 hover:text-red-700 font-semibold"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Clear
+                          </button>
+                        )}
+                      </div>
+
+                      {sig1Mode === 'draw' ? (
+                        <div className="p-3 bg-[#fafafa]">
+                          <canvas
+                            ref={sig1CanvasRef}
+                            width={500}
+                            height={100}
+                            className="w-full h-20 rounded-lg border border-dashed border-indigo-200 bg-white cursor-crosshair touch-none"
+                            style={{ boxShadow: 'inset 0 1px 4px rgba(99,102,241,0.06)' }}
+                            onMouseDown={e => startDraw(1, e)}
+                            onMouseMove={e => draw(1, e)}
+                            onMouseUp={() => endDraw(1)}
+                            onMouseLeave={() => endDraw(1)}
+                            onTouchStart={e => startDraw(1, e)}
+                            onTouchMove={e => draw(1, e)}
+                            onTouchEnd={() => endDraw(1)}
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1.5 text-center">
+                            Sign above using your mouse or finger • {sig1ImageUrl ? '✓ Signature captured' : 'Canvas is empty'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3">
+                          <label className="flex flex-col items-center gap-2 py-4 border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-xl cursor-pointer bg-indigo-50/30 hover:bg-indigo-50 transition-all text-center">
+                            <Upload className="w-6 h-6 text-indigo-400" />
+                            <span className="text-xs font-semibold text-indigo-700">
+                              {sig1ImageUrl ? 'Replace Signature Image' : 'Upload Signature Image (PNG/JPG/SVG)'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">Transparent PNG recommended for best results</span>
+                            <input type="file" accept="image/*" onChange={e => handleSigUpload(1, e)} className="hidden" />
+                          </label>
+                        </div>
+                      )}
+
+                      {sig1ImageUrl && (
+                        <div className="px-4 pb-3 flex items-center gap-2 border-t border-slate-50 bg-emerald-50/50 pt-2">
+                          <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                          <img src={sig1ImageUrl} alt="Sig 1 Preview" className="h-8 max-w-[180px] object-contain" />
+                          <span className="text-[10px] text-emerald-700 font-semibold">Signature ready</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-700">
-                        Second Signatory Name (Director / Principal)
-                      </Label>
-                      <Input
-                        value={secondSignatoryName}
-                        onChange={e => setSecondSignatoryName(e.target.value)}
-                        placeholder="e.g. Prof. Vikram Singh"
-                        className="text-sm"
-                      />
+                  {/* ---- SECOND SIGNATORY ---- */}
+                  <div className="space-y-3 pt-3 border-t border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">2</div>
+                      <span className="text-xs font-bold text-slate-800">Second Signatory <span className="text-slate-400 font-normal">(Director / Principal)</span></span>
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold text-slate-700">
-                        Second Signatory Title
-                      </Label>
-                      <Input
-                        value={secondSignatoryTitle}
-                        onChange={e => setSecondSignatoryTitle(e.target.value)}
-                        placeholder="e.g. Director of Certification"
-                        className="text-sm"
-                      />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
+                        <Input
+                          value={secondSignatoryName}
+                          onChange={e => setSecondSignatoryName(e.target.value)}
+                          placeholder="e.g. Prof. Vikram Singh"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold text-slate-700">Designation / Title</Label>
+                        <Input
+                          value={secondSignatoryTitle}
+                          onChange={e => setSecondSignatoryTitle(e.target.value)}
+                          placeholder="e.g. Director of Certification"
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Signature Pad */}
+                    <div className="rounded-2xl border border-purple-200/70 bg-white overflow-hidden">
+                      <div className="flex border-b border-slate-100 bg-slate-50/80">
+                        <button
+                          type="button"
+                          onClick={() => setSig2Mode('draw')}
+                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all border-r border-slate-100 ${sig2Mode === 'draw' ? 'bg-white text-purple-700 border-b-2 border-b-purple-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          <PenLine className="w-3.5 h-3.5" /> Draw Signature
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSig2Mode('upload')}
+                          className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold transition-all ${sig2Mode === 'upload' ? 'bg-white text-purple-700 border-b-2 border-b-purple-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          <Upload className="w-3.5 h-3.5" /> Upload Image
+                        </button>
+                        <div className="flex-1" />
+                        {sig2ImageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => { clearCanvas(2); setSig2ImageUrl(''); }}
+                            className="flex items-center gap-1 px-3 text-xs text-red-500 hover:text-red-700 font-semibold"
+                          >
+                            <RotateCcw className="w-3 h-3" /> Clear
+                          </button>
+                        )}
+                      </div>
+
+                      {sig2Mode === 'draw' ? (
+                        <div className="p-3 bg-[#fafafa]">
+                          <canvas
+                            ref={sig2CanvasRef}
+                            width={500}
+                            height={100}
+                            className="w-full h-20 rounded-lg border border-dashed border-purple-200 bg-white cursor-crosshair touch-none"
+                            style={{ boxShadow: 'inset 0 1px 4px rgba(147,51,234,0.06)' }}
+                            onMouseDown={e => startDraw(2, e)}
+                            onMouseMove={e => draw(2, e)}
+                            onMouseUp={() => endDraw(2)}
+                            onMouseLeave={() => endDraw(2)}
+                            onTouchStart={e => startDraw(2, e)}
+                            onTouchMove={e => draw(2, e)}
+                            onTouchEnd={() => endDraw(2)}
+                          />
+                          <p className="text-[10px] text-slate-400 mt-1.5 text-center">
+                            Sign above using your mouse or finger • {sig2ImageUrl ? '✓ Signature captured' : 'Canvas is empty'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="p-3">
+                          <label className="flex flex-col items-center gap-2 py-4 border-2 border-dashed border-purple-200 hover:border-purple-400 rounded-xl cursor-pointer bg-purple-50/30 hover:bg-purple-50 transition-all text-center">
+                            <Upload className="w-6 h-6 text-purple-400" />
+                            <span className="text-xs font-semibold text-purple-700">
+                              {sig2ImageUrl ? 'Replace Signature Image' : 'Upload Signature Image (PNG/JPG/SVG)'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">Transparent PNG recommended for best results</span>
+                            <input type="file" accept="image/*" onChange={e => handleSigUpload(2, e)} className="hidden" />
+                          </label>
+                        </div>
+                      )}
+
+                      {sig2ImageUrl && (
+                        <div className="px-4 pb-3 flex items-center gap-2 border-t border-slate-50 bg-emerald-50/50 pt-2">
+                          <div className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                          <img src={sig2ImageUrl} alt="Sig 2 Preview" className="h-8 max-w-[180px] object-contain" />
+                          <span className="text-[10px] text-emerald-700 font-semibold">Signature ready</span>
+                        </div>
+                      )}
                     </div>
                   </div>
+
                 </CardContent>
               </Card>
+
 
               {/* Navigation Buttons */}
               <div className="flex items-center justify-between pt-2">
@@ -1684,6 +1948,8 @@ export function CertificatesCreatePage() {
               signatoryTitle={signatoryTitle}
               secondSignatoryName={secondSignatoryName}
               secondSignatoryTitle={secondSignatoryTitle}
+              sig1ImageUrl={sig1ImageUrl || undefined}
+              sig2ImageUrl={sig2ImageUrl || undefined}
               qrDataUrl={previewQrUrl}
               instituteLogoUrl={selectedInstituteLogo}
             />

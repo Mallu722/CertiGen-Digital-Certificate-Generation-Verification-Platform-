@@ -113,6 +113,8 @@ export interface Certificate {
   title: string;
   description: string;
   template: string;
+  template_name?: string;
+  category_name?: string;
   recipient_name: string;
   recipient_email: string;
   achievement?: string;

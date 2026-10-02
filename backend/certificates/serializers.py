@@ -5,6 +5,8 @@ from .models import Certificate
 class CertificateSerializer(serializers.ModelSerializer):
     recipient_name = serializers.CharField()
     recipient_email = serializers.EmailField()
+    template_name = serializers.CharField(source='template.name', read_only=True)
+    category_name = serializers.CharField(source='template.category.name', read_only=True)
     pdf_url = serializers.SerializerMethodField()
     qr_url = serializers.SerializerMethodField()
 
@@ -12,6 +14,7 @@ class CertificateSerializer(serializers.ModelSerializer):
         model = Certificate
         fields = [
             'id', 'certificate_number', 'title', 'description', 'template',
+            'template_name', 'category_name',
             'recipient_name', 'recipient_email', 'achievement', 'organization_name',
             'signatory_name', 'signatory_title', 'metadata', 'issued_by', 'issued_at',
             'status', 'revoked_at', 'revocation_reason',
@@ -19,7 +22,7 @@ class CertificateSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'issued_by', 'issued_at', 'verified', 'verification_id',
+            'id', 'template_name', 'category_name', 'issued_by', 'issued_at', 'verified', 'verification_id',
             'pdf_url', 'qr_url', 'created_at', 'updated_at'
         ]
 
