@@ -22,15 +22,25 @@ import {
   CheckCircle2, 
   XCircle,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Trophy,
+  GraduationCap,
+  Terminal,
+  Briefcase,
+  Sparkles,
+  Layers,
+  Sparkle
 } from 'lucide-react';
 import { certificatesService } from '@/services/certificates.service';
+import { templatesService } from '@/services/templates.service';
 import type { Certificate } from '@/types';
 
 export function CertificatesListPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [isSeeding, setIsSeeding] = useState(false);
   const [page, setPage] = useState(1);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   
@@ -111,23 +121,117 @@ export function CertificatesListPage() {
     });
   };
 
+  const getCategoryIcon = (categoryName: string | undefined) => {
+    const lower = (categoryName || '').toLowerCase();
+    if (lower.includes('sport')) return <Trophy className="w-3.5 h-3.5 text-amber-500" />;
+    if (lower.includes('college') || lower.includes('event') || lower.includes('fest')) return <GraduationCap className="w-3.5 h-3.5 text-purple-500" />;
+    if (lower.includes('hack') || lower.includes('code') || lower.includes('tech')) return <Terminal className="w-3.5 h-3.5 text-cyan-500" />;
+    if (lower.includes('corp') || lower.includes('business') || lower.includes('work')) return <Briefcase className="w-3.5 h-3.5 text-blue-500" />;
+    return <Sparkles className="w-3.5 h-3.5 text-indigo-500" />;
+  };
+
+  const handleSeedData = async () => {
+    try {
+      setIsSeeding(true);
+      await templatesService.seed();
+      await fetchCertificates();
+    } catch (err) {
+      console.error('Failed to seed:', err);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const getCertCategory = (cert: Certificate) => {
+    return cert.category_name || (cert.metadata as any)?.category || 'General';
+  };
+
+  const filteredCertificates = certificates.filter(cert => {
+    if (selectedCategory === 'ALL') return true;
+    const cat = getCertCategory(cert).toLowerCase();
+    return cat.includes(selectedCategory.toLowerCase());
+  });
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Certificates</h2>
-          <p className="text-slate-500">Generate, download, verify and manage certificate lifecycles</p>
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900">Certificates</h2>
+            <Badge variant="outline" className="bg-sky-50 text-sky-700 border-sky-200">
+              {certificates.length} Issued
+            </Badge>
+          </div>
+          <p className="text-sm text-slate-500 mt-1">Generate, download, verify and manage verified credentials across categories</p>
         </div>
-        <Link to="/certificates/create">
-          <Button className="shadow-sm">
-            <Plus className="mr-2 h-4 w-4" />
-            Issue Certificate
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleSeedData}
+            disabled={isSeeding}
+            className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            title="Load verified certificates across Sports, College Event, Hackathon, and Corporate"
+          >
+            {isSeeding ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                Seeding...
+              </>
+            ) : (
+              <>
+                <Sparkle className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
+                Load Category Certificates
+              </>
+            )}
           </Button>
-        </Link>
+
+          <Link to="/certificates/create">
+            <Button className="shadow-sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Issue Certificate
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
+          {/* Category Navigation Chips */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none border-b border-slate-100 pb-3">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
+              <Layers className="w-3.5 h-3.5" /> Filter Category:
+            </span>
+
+            {['ALL', 'Sports', 'College Event', 'Hackathon', 'Corporate'].map((cat) => {
+              const isSelected = selectedCategory === cat;
+              const count = cat === 'ALL'
+                ? certificates.length
+                : certificates.filter(c => getCertCategory(c).toLowerCase().includes(cat.toLowerCase())).length;
+
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
+                    isSelected
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat !== 'ALL' && getCategoryIcon(cat)}
+                  <span>{cat === 'ALL' ? 'All Certificates' : cat}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    isSelected ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <form onSubmit={handleSearchSubmit} className="mb-4">
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -150,7 +254,8 @@ export function CertificatesListPage() {
                 <TableHeader className="bg-slate-50/75">
                   <TableRow>
                     <TableHead className="font-semibold">Certificate ID</TableHead>
-                    <TableHead className="font-semibold">Title / Event</TableHead>
+                    <TableHead className="font-semibold">Category</TableHead>
+                    <TableHead className="font-semibold">Title / Template</TableHead>
                     <TableHead className="font-semibold">Recipient</TableHead>
                     <TableHead className="font-semibold">Date Issued</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
@@ -158,21 +263,47 @@ export function CertificatesListPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {certificates.length === 0 ? (
+                  {filteredCertificates.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-slate-500">
-                        No certificates found. Issue a new one to get started!
+                      <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                        <div className="space-y-3">
+                          <p>No certificates found for this selection.</p>
+                          {certificates.length === 0 && (
+                            <Button
+                              onClick={handleSeedData}
+                              disabled={isSeeding}
+                              className="bg-sky-600 hover:bg-sky-500 text-white font-bold"
+                            >
+                              {isSeeding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+                              Load 12 Category Certificates
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    certificates.map((certificate) => {
+                    filteredCertificates.map((certificate) => {
                       const isRevoked = certificate.status === 'REVOKED';
+                      const catName = getCertCategory(certificate);
                       return (
                         <TableRow key={certificate.id} className={isRevoked ? 'bg-red-50/30' : undefined}>
                           <TableCell className="font-mono font-medium text-slate-900">
                             {certificate.certificate_number}
                           </TableCell>
-                          <TableCell className="font-medium text-slate-800">{certificate.title}</TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                              {getCategoryIcon(catName)}
+                              {catName}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <span className="font-medium text-slate-800 block">{certificate.title}</span>
+                              {certificate.template_name && (
+                                <span className="text-xs text-sky-600 font-medium">Template: {certificate.template_name}</span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div>
                               <span className="font-medium text-slate-900 block">{certificate.recipient_name}</span>

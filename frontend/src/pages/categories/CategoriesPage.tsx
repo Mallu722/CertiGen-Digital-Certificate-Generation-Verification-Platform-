@@ -12,7 +12,23 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/modal';
-import { Search, Plus, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Search, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  AlertCircle,
+  Trophy,
+  GraduationCap,
+  Terminal,
+  Briefcase,
+  Sparkles,
+  ExternalLink,
+  Loader2,
+  FolderOpen
+} from 'lucide-react';
 import { categoriesService } from '@/services/categories.service';
 import type { Category } from '@/types';
 
@@ -47,6 +63,15 @@ export function CategoriesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getCategoryIcon = (categoryName: string) => {
+    const lower = (categoryName || '').toLowerCase();
+    if (lower.includes('sport')) return <Trophy className="w-4 h-4 text-amber-500" />;
+    if (lower.includes('college') || lower.includes('event') || lower.includes('fest')) return <GraduationCap className="w-4 h-4 text-purple-500" />;
+    if (lower.includes('hack') || lower.includes('code') || lower.includes('tech')) return <Terminal className="w-4 h-4 text-cyan-500" />;
+    if (lower.includes('corp') || lower.includes('business') || lower.includes('work')) return <Briefcase className="w-4 h-4 text-blue-500" />;
+    return <Sparkles className="w-4 h-4 text-indigo-500" />;
   };
 
   const handleOpenCreate = () => {
@@ -169,16 +194,35 @@ export function CategoriesPage() {
                   {filteredCategories.map((category) => (
                     <tr key={category.id} className="bg-white border-b hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-semibold text-slate-900">
-                        {category.name}
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 rounded-xl bg-slate-100 border border-slate-200">
+                            {getCategoryIcon(category.name)}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-900 block">{category.name}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">ID: {category.id.slice(0, 8)}...</span>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-500 max-w-md truncate">
+                      <td className="px-6 py-4 text-slate-500 max-w-md">
                         {category.description || '-'}
                       </td>
                       <td className="px-6 py-4 text-slate-500">
                         {new Date(category.created_at).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link to="/templates">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2.5 text-xs text-sky-700 border-sky-200 hover:bg-sky-50"
+                              title="Browse Templates"
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Templates
+                            </Button>
+                          </Link>
                           <Button 
                             variant="ghost" 
                             size="icon" 

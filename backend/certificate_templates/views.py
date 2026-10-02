@@ -7,13 +7,30 @@ from .serializers import TemplateSerializer, TemplateCreateSerializer
 from accounts.permissions import IsAdmin
 
 
+from rest_framework.pagination import PageNumberPagination
+
+class TemplatePagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class TemplateViewSet(viewsets.ModelViewSet):
-    queryset = Template.objects.all()
+    queryset = Template.objects.all().order_by('name')
+    pagination_class = TemplatePagination
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return TemplateCreateSerializer
         return TemplateSerializer
+
+    def list(self, request, *args, **kwargs):
+        if Template.objects.count() < 12:
+            try:
+                from seed_12_templates import run_seed
+                run_seed()
+            except Exception as e:
+                print("Auto-seed error:", e)
+        return super().list(request, *args, **kwargs)
     
     def get_permissions(self):
         # Mentors and other authenticated users can read (list, retrieve, unlock)

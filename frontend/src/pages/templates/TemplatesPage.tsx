@@ -38,7 +38,14 @@ import {
   KeyRound,
   Globe,
   ShieldAlert,
-  Loader2
+  Loader2,
+  Trophy,
+  GraduationCap,
+  Terminal,
+  Briefcase,
+  Sparkles,
+  Layers,
+  Sparkle
 } from 'lucide-react';
 import { templatesService } from '@/services/templates.service';
 import { categoriesService } from '@/services/categories.service';
@@ -55,6 +62,9 @@ export function TemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
+  const [privacyFilter, setPrivacyFilter] = useState<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
+  const [isSeeding, setIsSeeding] = useState(false);
 
   useEffect(() => {
     setIsAdmin(authService.isAdmin());
@@ -117,6 +127,27 @@ export function TemplatesPage() {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
     return `http://localhost:8000${url}`;
+  };
+
+  const getCategoryIcon = (categoryName: string) => {
+    const lower = (categoryName || '').toLowerCase();
+    if (lower.includes('sport')) return <Trophy className="w-3.5 h-3.5 text-amber-500" />;
+    if (lower.includes('college') || lower.includes('event') || lower.includes('fest')) return <GraduationCap className="w-3.5 h-3.5 text-purple-500" />;
+    if (lower.includes('hack') || lower.includes('code') || lower.includes('tech')) return <Terminal className="w-3.5 h-3.5 text-cyan-500" />;
+    if (lower.includes('corp') || lower.includes('business') || lower.includes('work')) return <Briefcase className="w-3.5 h-3.5 text-blue-500" />;
+    return <Sparkles className="w-3.5 h-3.5 text-indigo-500" />;
+  };
+
+  const handleSeedData = async () => {
+    try {
+      setIsSeeding(true);
+      await templatesService.seed();
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to seed:', err);
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   // Open create modal
@@ -307,11 +338,29 @@ export function TemplatesPage() {
     }
   };
 
-  const filteredTemplates = templates.filter((template) =>
-    template.name.toLowerCase().includes(search.toLowerCase()) ||
-    template.description.toLowerCase().includes(search.toLowerCase()) ||
-    (template.purpose && template.purpose.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredTemplates = templates.filter((template) => {
+    const matchesSearch =
+      template.name.toLowerCase().includes(search.toLowerCase()) ||
+      template.description.toLowerCase().includes(search.toLowerCase()) ||
+      (template.purpose && template.purpose.toLowerCase().includes(search.toLowerCase())) ||
+      getCategoryName(template.category).toLowerCase().includes(search.toLowerCase());
+
+    const catName = getCategoryName(template.category);
+    const matchesCategory =
+      selectedCategory === 'ALL' ||
+      template.category === selectedCategory ||
+      catName.toLowerCase() === selectedCategory.toLowerCase();
+
+    const matchesPrivacy =
+      privacyFilter === 'ALL' ||
+      (privacyFilter === 'PUBLIC' && !template.is_private) ||
+      (privacyFilter === 'PRIVATE' && template.is_private);
+
+    return matchesSearch && matchesCategory && matchesPrivacy;
+  });
+
+  const privateTemplatesCount = templates.filter(t => t.is_private).length;
+  const publicTemplatesCount = templates.filter(t => !t.is_private).length;
 
   return (
     <div className="space-y-6">
@@ -331,12 +380,36 @@ export function TemplatesPage() {
           </p>
         </div>
 
-        {/* Admin only action */}
-        {isAdmin && (
-          <Button onClick={handleOpenCreate} className="shadow-sm">
-            <Plus className="mr-2 h-4 w-4" /> Add Template
-          </Button>
-        )}
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Button
+              variant="outline"
+              onClick={handleSeedData}
+              disabled={isSeeding}
+              className="text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+              title="Ensure all 12 templates across Sports, College Event, Hackathon & Corporate are loaded"
+            >
+              {isSeeding ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Seeding Templates...
+                </>
+              ) : (
+                <>
+                  <Sparkle className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
+                  Load 12 Templates
+                </>
+              )}
+            </Button>
+          )}
+
+          {isAdmin && (
+            <Button onClick={handleOpenCreate} className="shadow-sm">
+              <Plus className="mr-2 h-4 w-4" /> Add Template
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Mentor notice banner */}
@@ -349,20 +422,133 @@ export function TemplatesPage() {
         </div>
       )}
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="mb-6">
-            <div className="relative max-w-sm">
+      {/* Pinterest-Style Category Filter & Privacy Bar */}
+      <Card className="border border-slate-200/80 shadow-xs">
+        <CardContent className="p-4 space-y-4">
+          {/* Top row: Pinterest Category Navigation Chips */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
+                <Layers className="w-3.5 h-3.5" /> Categories:
+              </span>
+              
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('ALL')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
+                  selectedCategory === 'ALL'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                All Templates
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                  selectedCategory === 'ALL' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {templates.length}
+                </span>
+              </button>
+
+              {categories.map((cat) => {
+                const count = templates.filter(
+                  t => t.category === cat.id || getCategoryName(t.category) === cat.name
+                ).length;
+                const isSelected = selectedCategory === cat.id || selectedCategory === cat.name;
+
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-sky-600 text-white shadow-xs ring-2 ring-sky-300'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {getCategoryIcon(cat.name)}
+                    <span>{cat.name}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                      isSelected ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Privacy Filters (All / Public / Private) */}
+            <div className="flex items-center gap-1 shrink-0 bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setPrivacyFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                  privacyFilter === 'ALL'
+                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
+                }`}
+              >
+                All ({templates.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrivacyFilter('PUBLIC')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                  privacyFilter === 'PUBLIC'
+                    ? 'bg-emerald-50 text-emerald-800 shadow-2xs font-semibold border border-emerald-200'
+                    : 'text-slate-500 hover:text-emerald-700'
+                }`}
+              >
+                <Globe className="w-3 h-3 text-emerald-600" />
+                Public ({publicTemplatesCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrivacyFilter('PRIVATE')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+                  privacyFilter === 'PRIVATE'
+                    ? 'bg-amber-50 text-amber-800 shadow-2xs font-semibold border border-amber-300'
+                    : 'text-slate-500 hover:text-amber-700'
+                }`}
+              >
+                <Lock className="w-3 h-3 text-amber-600" />
+                Private ({privateTemplatesCount})
+              </button>
+            </div>
+          </div>
+
+          {/* Search bar & Active filter indicators */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative max-w-md w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="Search templates by purpose or name..."
+                placeholder="Search templates by purpose, style, or name..."
                 className="pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-800">{filteredTemplates.length}</span> of {templates.length} templates
             </div>
           </div>
+        </CardContent>
+      </Card>
 
+      {/* Main Grid */}
+      <Card>
+        <CardContent className="pt-6">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600" />
@@ -371,17 +557,28 @@ export function TemplatesPage() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredTemplates.map((template) => {
                 const isLocked = template.is_private && !isAdmin && !unlockedIds.has(template.id);
+                const catName = getCategoryName(template.category);
+
                 return (
-                  <Card key={template.id} className="overflow-hidden flex flex-col justify-between group border border-slate-200 hover:shadow-md transition-all duration-200">
+                  <Card key={template.id} className="overflow-hidden flex flex-col justify-between group border border-slate-200 hover:shadow-xl transition-all duration-300 bg-white rounded-2xl">
                     <div>
-                      {/* Header Preview Canvas */}
+                      {/* Header Preview Canvas - Pinterest Certificate Style */}
                       <div
-                        className="h-44 flex flex-col items-center justify-center relative overflow-hidden border-b p-3 text-center"
+                        className="h-48 flex flex-col items-center justify-center relative overflow-hidden border-b p-3 text-center select-none"
                         style={{
-                          backgroundColor: '#fafaf9',
+                          backgroundColor: '#fcfcfc',
                           borderColor: template.secondary_color || '#c59b27'
                         }}
                       >
+                        {/* Background guilloche watermark */}
+                        <div
+                          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                          style={{
+                            backgroundImage: `radial-gradient(circle at center, ${template.primary_color || '#0f2744'} 1.5px, transparent 1.5px)`,
+                            backgroundSize: '16px 16px'
+                          }}
+                        />
+
                         {template.image_url ? (
                           <img
                             src={getImageUrl(template.image_url)}
@@ -390,38 +587,65 @@ export function TemplatesPage() {
                           />
                         ) : (
                           <div
-                            className="w-full h-full rounded-xl border-2 border-dashed p-3 flex flex-col items-center justify-center relative bg-white/80 shadow-2xs"
-                            style={{ borderColor: template.primary_color || '#0f2744' }}
+                            className="w-full h-full rounded-xl border-2 p-3 flex flex-col items-center justify-between relative bg-white shadow-xs transition-all duration-200"
+                            style={{
+                              borderColor: template.primary_color || '#0f2744',
+                              outline: `1px dashed ${template.secondary_color || '#c59b27'}`,
+                              outlineOffset: '-4px'
+                            }}
                           >
+                            {/* Pinterest Corner Filigrees */}
+                            <span className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: template.secondary_color || '#c59b27' }} />
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: template.secondary_color || '#c59b27' }} />
+                            <span className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: template.secondary_color || '#c59b27' }} />
+                            <span className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: template.secondary_color || '#c59b27' }} />
+
                             <span
-                              className="text-[9px] font-black uppercase tracking-widest"
-                              style={{ color: template.secondary_color || '#c59b27' }}
+                              className="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm border"
+                              style={{
+                                color: template.secondary_color || '#c59b27',
+                                borderColor: `${template.secondary_color || '#c59b27'}40`,
+                                backgroundColor: `${template.accent_color || '#fef08a'}30`
+                              }}
                             >
                               {template.badge_text || 'CERTIGEN VERIFIED CREDENTIAL'}
                             </span>
-                            <h4
-                              className="text-xs font-black uppercase tracking-tight mt-1 line-clamp-1 font-serif"
-                              style={{ color: template.primary_color || '#0f2744' }}
-                            >
-                              {template.title_prefix || 'CERTIFICATE OF'} {template.subtitle || 'HONOR'}
-                            </h4>
-                            <div
-                              className="w-10 h-0.5 my-1"
-                              style={{ backgroundColor: template.secondary_color || '#c59b27' }}
-                            />
-                            <p className="text-[10px] italic text-slate-500 font-serif line-clamp-1">
-                              {template.presentation_line || 'This is proudly presented to'}
-                            </p>
-                            <span className="text-[11px] font-bold text-slate-800 font-serif mt-0.5">
-                              [STUDENT NAME]
-                            </span>
+
+                            <div className="my-auto">
+                              <h4
+                                className="text-xs font-black uppercase tracking-wider font-serif line-clamp-1"
+                                style={{ color: template.primary_color || '#0f2744' }}
+                              >
+                                {template.title_prefix || 'CERTIFICATE OF'} {template.subtitle || 'HONOR'}
+                              </h4>
+                              <div
+                                className="w-8 h-0.5 mx-auto my-1 rounded-full"
+                                style={{ backgroundColor: template.secondary_color || '#c59b27' }}
+                              />
+                              <p className="text-[9px] italic text-slate-500 font-serif line-clamp-1">
+                                {template.presentation_line || 'This is proudly presented to'}
+                              </p>
+                              <span
+                                className="text-[10px] font-bold font-serif tracking-wide block mt-0.5"
+                                style={{ color: template.primary_color || '#0f2744' }}
+                              >
+                                [RECIPIENT NAME]
+                              </span>
+                            </div>
+
+                            {/* Bottom decorative seal */}
+                            <div className="flex items-center justify-center gap-1 opacity-70">
+                              <span className="w-4 h-[1px]" style={{ backgroundColor: template.secondary_color || '#c59b27' }} />
+                              <Award className="w-2.5 h-2.5" style={{ color: template.secondary_color || '#c59b27' }} />
+                              <span className="w-4 h-[1px]" style={{ backgroundColor: template.secondary_color || '#c59b27' }} />
+                            </div>
                           </div>
                         )}
 
                         {/* Top-Left: Public vs Private Badge */}
-                        <div className="absolute top-2.5 left-2.5">
+                        <div className="absolute top-2.5 left-2.5 z-10">
                           {template.is_private ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs flex items-center gap-1 border bg-amber-50 text-amber-800 border-amber-300">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs flex items-center gap-1 border bg-amber-50 text-amber-900 border-amber-300">
                               <Lock className="w-2.5 h-2.5 text-amber-600" />
                               Private
                             </span>
@@ -431,6 +655,19 @@ export function TemplatesPage() {
                               Public
                             </span>
                           )}
+                        </div>
+
+                        {/* Hover Quick Preview Action */}
+                        <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center z-20 backdrop-blur-[1px]">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handlePromptUnlock(template, 'preview')}
+                            className="bg-white/95 text-slate-900 hover:bg-white text-xs font-bold shadow-lg"
+                          >
+                            <Eye className="w-3.5 h-3.5 mr-1 text-sky-600" />
+                            Quick Preview
+                          </Button>
                         </div>
 
                         {/* Top-Right: Active toggle (Admin only, read-only for mentor) */}

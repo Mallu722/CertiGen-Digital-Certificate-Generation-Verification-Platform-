@@ -3,6 +3,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 from verification.models import VerificationLog, SiteVisit
+from categories.models import Category
 from certificate_templates.models import Template
 from certificates.models import Certificate
 from accounts.models import User
@@ -12,6 +13,25 @@ from accounts.serializers import UserAdminSerializer
 @permission_classes([AllowAny])
 def health_check(request):
     return Response({"status": "ok"})
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([AllowAny])
+def seed_database_view(request):
+    """Seed the 4 categories, 12 Pinterest templates, and sample certificates."""
+    try:
+        from seed_12_templates import run_seed
+        run_seed()
+        return Response({
+            "status": "success",
+            "message": "Seeded 4 categories, 12 Pinterest templates (2 private), and certificates successfully!",
+            "categories_count": Category.objects.count(),
+            "templates_count": Template.objects.count(),
+            "private_templates_count": Template.objects.filter(is_private=True).count(),
+            "certificates_count": Certificate.objects.count()
+        })
+    except Exception as e:
+        return Response({"status": "error", "message": str(e)}, status=500)
 
 
 @api_view(['POST'])

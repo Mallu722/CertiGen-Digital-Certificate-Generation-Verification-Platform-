@@ -2,8 +2,10 @@ import apiClient from '@/api/client';
 import type { Certificate, PaginatedResponse, VerificationResponse } from '@/types';
 
 export const certificatesService = {
-  async getAll(params?: { page?: number; search?: string; status?: string }): Promise<PaginatedResponse<Certificate>> {
-    const response = await apiClient.get<PaginatedResponse<Certificate>>('/certificates/', { params });
+  async getAll(params?: { page?: number; search?: string; status?: string; page_size?: number }): Promise<PaginatedResponse<Certificate>> {
+    const response = await apiClient.get<PaginatedResponse<Certificate>>('/certificates/', {
+      params: { page_size: 50, ...params }
+    });
     return response.data;
   },
 
