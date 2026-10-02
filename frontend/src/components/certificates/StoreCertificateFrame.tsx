@@ -13,6 +13,8 @@ export interface StoreCertificateFrameProps {
   signatoryTitle?: string;
   secondSignatoryName?: string;
   secondSignatoryTitle?: string;
+  sig1ImageUrl?: string;  // Digital signature image for primary signatory
+  sig2ImageUrl?: string;  // Digital signature image for second signatory
   issueDate?: string;
   certificateNumber?: string;
   qrDataUrl?: string;
@@ -36,6 +38,8 @@ export function StoreCertificateFrame({
   signatoryTitle = 'Dean of Academic Affairs',
   secondSignatoryName = 'Prof. Vikram Singh',
   secondSignatoryTitle = 'Program Director',
+  sig1ImageUrl,
+  sig2ImageUrl,
   issueDate = new Date().toISOString().split('T')[0],
   certificateNumber = 'CERT-2026-000001',
   qrDataUrl,
@@ -286,6 +290,19 @@ export function StoreCertificateFrame({
         <div className="w-full flex items-end justify-between pt-4 border-t border-slate-200/80 text-left">
           {/* Left Signatory / Details */}
           <div className="space-y-0.5">
+            {/* Digital Signature Image or blank space */}
+            <div className="h-10 w-36 sm:w-44 mb-0.5 flex items-end">
+              {sig1ImageUrl ? (
+                <img
+                  src={sig1ImageUrl}
+                  alt="Signature 1"
+                  className="max-h-10 max-w-full object-contain"
+                  style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.08))' }}
+                />
+              ) : (
+                <div className="w-full" />
+              )}
+            </div>
             <div className="w-32 sm:w-40 border-b border-slate-400 mb-1.5" />
             <p 
               className="font-bold text-xs sm:text-sm"
@@ -303,6 +320,19 @@ export function StoreCertificateFrame({
 
           {/* Right Signatory (Director / President) */}
           <div className="text-right space-y-0.5">
+            {/* Digital Signature Image or blank space */}
+            <div className="h-10 w-36 sm:w-44 mb-0.5 flex items-end justify-end">
+              {sig2ImageUrl ? (
+                <img
+                  src={sig2ImageUrl}
+                  alt="Signature 2"
+                  className="max-h-10 max-w-full object-contain ml-auto"
+                  style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.08))' }}
+                />
+              ) : (
+                <div className="w-full" />
+              )}
+            </div>
             <div className="w-32 sm:w-40 border-b border-slate-400 ml-auto mb-1.5" />
             <p 
               className="font-bold text-xs sm:text-sm"
