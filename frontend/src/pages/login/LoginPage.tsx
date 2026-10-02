@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,14 +12,10 @@ import type { Role } from '@/types';
 import { 
   AlertCircle, 
   LogIn, 
-  KeyRound, 
   ShieldCheck, 
   GraduationCap, 
-  Check, 
   ArrowRight,
-  User,
-  X,
-  Sparkles
+  Lock
 } from 'lucide-react';
 
 const loginSchema = z.object({
@@ -39,7 +35,11 @@ const GoogleIcon = () => (
 );
 
 export function LoginPage() {
-  const [selectedRole, setSelectedRole] = useState<Role>('ADMIN');
+  const location = useLocation();
+  // Detect if this is the hidden admin login route
+  const isAdminPortal = location.pathname === '/admin-login';
+  const selectedRole: Role = isAdminPortal ? 'ADMIN' : 'MENTOR';
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ export function LoginPage() {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      email: isAdminPortal ? 'mallikarjunhiremath0722@gmail.com' : '',
       password: '',
     },
   });
@@ -68,12 +68,6 @@ export function LoginPage() {
       setLoading(false);
     }
   };
-
-  const handleSelectRole = (role: Role) => {
-    setSelectedRole(role);
-    setError(null);
-  };
-
 
   // Google OAuth Login Action
   const loginWithGoogle = useGoogleLogin({
@@ -123,73 +117,27 @@ export function LoginPage() {
   return (
     <div className="w-full space-y-6">
       <div className="text-center">
-        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center gap-2">
-          <LogIn className="w-7 h-7 text-sky-600" />
-          Welcome Back
-        </h2>
-        <p className="text-sm text-slate-500 mt-1">Select your portal role and sign in</p>
-      </div>
-
-      {/* 1. ROLE SELECTOR: ADMIN vs MENTOR */}
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-600 uppercase tracking-wider block">
-          Select Your Portal Role:
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Admin Role Card */}
-          <div
-            onClick={() => handleSelectRole('ADMIN')}
-            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex flex-col justify-between ${
-              selectedRole === 'ADMIN'
-                ? 'border-sky-600 bg-sky-50/50 shadow-sm ring-2 ring-sky-100'
-                : 'border-slate-200 bg-white hover:border-slate-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className={`p-2 rounded-xl ${selectedRole === 'ADMIN' ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-              {selectedRole === 'ADMIN' && (
-                <span className="w-5 h-5 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs">
-                  <Check className="w-3 h-3 stroke-[3]" />
-                </span>
-              )}
+        {isAdminPortal ? (
+          <>
+            <div className="w-14 h-14 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center mx-auto mb-3 shadow-sm">
+              <ShieldCheck className="w-7 h-7" />
             </div>
-            <div>
-              <h4 className="font-bold text-sm text-slate-900">Administrator</h4>
-              <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
-                Full platform audit, templates & revocation
-              </p>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              Administrator Portal
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">Restricted access — authorized personnel only</p>
+          </>
+        ) : (
+          <>
+            <div className="w-14 h-14 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto mb-3 shadow-sm">
+              <GraduationCap className="w-7 h-7" />
             </div>
-          </div>
-
-          {/* Mentor Role Card */}
-          <div
-            onClick={() => handleSelectRole('MENTOR')}
-            className={`cursor-pointer p-3.5 rounded-2xl border-2 transition-all flex flex-col justify-between ${
-              selectedRole === 'MENTOR'
-                ? 'border-indigo-600 bg-indigo-50/50 shadow-sm ring-2 ring-indigo-100'
-                : 'border-slate-200 bg-white hover:border-slate-300'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className={`p-2 rounded-xl ${selectedRole === 'MENTOR' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                <GraduationCap className="w-4 h-4" />
-              </div>
-              {selectedRole === 'MENTOR' && (
-                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">
-                  <Check className="w-3 h-3 stroke-[3]" />
-                </span>
-              )}
-            </div>
-            <div>
-              <h4 className="font-bold text-sm text-slate-900">Mentor / Issuer</h4>
-              <p className="text-[11px] text-slate-500 leading-tight mt-0.5">
-                Issue certificates, student ledger & verification
-              </p>
-            </div>
-          </div>
-        </div>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+              Welcome Back
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">Sign in to issue and verify certificates</p>
+          </>
+        )}
       </div>
 
       {error && (
@@ -202,11 +150,11 @@ export function LoginPage() {
         </div>
       )}
 
-      {/* 2. CREDENTIALS FORM */}
+      {/* CREDENTIALS FORM */}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <FormLabel htmlFor="email">
-            Email Address ({selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor'})
+            {isAdminPortal ? 'Administrator Email' : 'Email Address'}
           </FormLabel>
           <Controller
             name="email"
@@ -214,7 +162,14 @@ export function LoginPage() {
             render={({ field }) => (
               <FormItem>
                 <FormControl>
-                  <Input id="email" type="email" placeholder="e.g. name@company.com" {...field} />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder={isAdminPortal ? 'Admin email address' : 'e.g. name@company.com'}
+                    {...field}
+                    readOnly={isAdminPortal}
+                    className={isAdminPortal ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}
+                  />
                 </FormControl>
                 {form.formState.errors.email && (
                   <FormMessage>{form.formState.errors.email.message}</FormMessage>
@@ -225,12 +180,7 @@ export function LoginPage() {
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <FormLabel htmlFor="password">Password</FormLabel>
-            <a href="#" className="text-xs text-sky-600 hover:text-sky-700 font-medium transition-colors">
-              Forgot password?
-            </a>
-          </div>
+          <FormLabel htmlFor="password">Password</FormLabel>
           <Controller
             name="password"
             control={form.control}
@@ -250,54 +200,74 @@ export function LoginPage() {
         <Button 
           type="submit" 
           className={`w-full h-11 text-base font-bold shadow-md ${
-            selectedRole === 'ADMIN' 
+            isAdminPortal 
               ? 'bg-gradient-to-r from-sky-600 to-indigo-600 shadow-sky-600/25' 
               : 'bg-gradient-to-r from-indigo-600 to-violet-600 shadow-indigo-600/25'
           }`} 
           isLoading={loading} 
           disabled={loading}
         >
-          Sign In as {selectedRole === 'ADMIN' ? 'Administrator' : 'Mentor'}
-          <ArrowRight className="w-4 h-4 ml-1.5" />
+          {isAdminPortal ? (
+            <>
+              <Lock className="w-4 h-4 mr-1.5" />
+              Sign In as Administrator
+            </>
+          ) : (
+            <>
+              Sign In
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </>
+          )}
         </Button>
       </form>
 
-      {/* 3. SOCIAL LOGINS (GOOGLE OAUTH) */}
-      <div className="space-y-4 pt-1">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
+      {/* Google OAuth — only for Mentor portal */}
+      {!isAdminPortal && (
+        <div className="space-y-4 pt-1">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-3 text-slate-400 font-semibold uppercase tracking-wider">
+                Or sign in with OAuth
+              </span>
+            </div>
           </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-white px-3 text-slate-400 font-semibold uppercase tracking-wider">
-              Or sign in with OAuth
-            </span>
+
+          <div>
+            <Button 
+              variant="outline" 
+              type="button" 
+              onClick={() => loginWithGoogle()} 
+              disabled={loading}
+              className="w-full h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors flex items-center justify-center"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </Button>
           </div>
         </div>
+      )}
 
-        <div>
-          <Button 
-            variant="outline" 
-            type="button" 
-            onClick={() => loginWithGoogle()} 
-            disabled={loading}
-            className="w-full h-10 border-slate-200 hover:bg-slate-50 font-semibold text-slate-700 transition-colors flex items-center justify-center"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </Button>
+      {!isAdminPortal && (
+        <div className="text-center pt-1">
+          <p className="text-xs text-slate-500">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-sky-600 font-semibold hover:text-sky-700 hover:underline transition-colors">
+              Sign up
+            </Link>
+          </p>
         </div>
-      </div>
+      )}
 
-      <div className="text-center pt-1">
-        <p className="text-xs text-slate-500">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-sky-600 font-semibold hover:text-sky-700 hover:underline transition-colors">
-            Sign up
+      {isAdminPortal && (
+        <div className="text-center">
+          <Link to="/login" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+            ← Back to Mentor Login
           </Link>
-        </p>
-      </div>
-
+        </div>
+      )}
     </div>
   );
 }

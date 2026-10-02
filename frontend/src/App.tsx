@@ -66,6 +66,12 @@ function App() {
               <LoginPage />
             </PublicRoute>
           } />
+          {/* Secret Admin Portal — not linked anywhere in the UI */}
+          <Route path="/admin-login" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
           <Route path="/register" element={
             <PublicRoute>
               <RegisterPage />

@@ -28,7 +28,10 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password_confirm', None)
         role = validated_data.get('role', 'MENTOR').upper()
-        is_admin = (role == 'ADMIN')
+        # SECURITY: Registration can never create an ADMIN account
+        if role == 'ADMIN':
+            role = 'MENTOR'
+        is_admin = False  # Registration always creates MENTOR accounts
         user = User.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'],
@@ -36,8 +39,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data['last_name'],
             password=validated_data['password'],
             role=role,
-            is_staff=is_admin,
-            is_superuser=is_admin
+            is_staff=False,
+            is_superuser=False
         )
         return user
 

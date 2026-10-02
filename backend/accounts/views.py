@@ -12,12 +12,27 @@ from .serializers import (
     LoginSerializer
 )
 
+# ============================================================
+# LOCKED ADMIN CREDENTIALS — Only this account can be Admin
+# ============================================================
+ADMIN_EMAIL = 'mallikarjunhiremath0722@gmail.com'
+ADMIN_PASSWORD = 'Mallu@722'
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_view(request):
-    """Register a new user"""
-    serializer = UserRegisterSerializer(data=request.data)
+    """Register a new user — ADMIN role is not allowed via registration."""
+    data = request.data.copy()
+
+    # SECURITY: Nobody can self-register as ADMIN
+    if data.get('role', 'MENTOR').upper() == 'ADMIN':
+        return Response(
+            {'error': 'Administrator accounts cannot be created via registration. Contact your system administrator.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    serializer = UserRegisterSerializer(data=data)
     if serializer.is_valid():
         user = serializer.save()
         refresh = RefreshToken.for_user(user)
@@ -32,7 +47,7 @@ def register_view(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    """Login and get JWT tokens with optional role validation"""
+    """Login and get JWT tokens. Admin portal is restricted to one fixed account."""
     serializer = LoginSerializer(data=request.data)
     if serializer.is_valid():
         from django.contrib.auth import authenticate
@@ -40,25 +55,35 @@ def login_view(request):
         password = serializer.validated_data['password']
         expected_role = request.data.get('role')  # 'ADMIN' or 'MENTOR'
 
-        # Auto-ensure demo accounts exist if logging in with demo credentials
-        if email == 'admin@example.com' and password == 'password':
-            u, _ = User.objects.get_or_create(
-                email='admin@example.com',
-                defaults={'username': 'admin_master', 'first_name': 'System', 'last_name': 'Administrator', 'role': 'ADMIN', 'is_staff': True, 'is_superuser': True}
+        # ---------------------------------------------------------------
+        # SECURITY GATE: Only the real admin email can access ADMIN portal
+        # ---------------------------------------------------------------
+        if expected_role == 'ADMIN' and email.lower() != ADMIN_EMAIL.lower():
+            return Response(
+                {'error': 'Access denied. Administrator portal is restricted to authorized personnel only.'},
+                status=status.HTTP_403_FORBIDDEN
             )
-            u.set_password('password')
-            u.role = 'ADMIN'
-            u.is_staff = True
-            u.save()
-        elif email == 'mentor@example.com' and password == 'password':
-            u, _ = User.objects.get_or_create(
-                email='mentor@example.com',
-                defaults={'username': 'mentor_master', 'first_name': 'Alex', 'last_name': 'Mentor', 'role': 'MENTOR', 'is_staff': False}
+
+        # Always ensure the real admin account exists with the correct credentials
+        if email.lower() == ADMIN_EMAIL.lower():
+            admin_user, _ = User.objects.get_or_create(
+                email=ADMIN_EMAIL,
+                defaults={
+                    'username': 'mallikarjun_admin',
+                    'first_name': 'Mallikarjun',
+                    'last_name': 'Hiremath',
+                    'role': 'ADMIN',
+                    'is_staff': True,
+                    'is_superuser': True
+                }
             )
-            u.set_password('password')
-            u.role = 'MENTOR'
-            u.is_staff = False
-            u.save()
+            # Always keep password and role correct
+            admin_user.set_password(ADMIN_PASSWORD)
+            admin_user.role = 'ADMIN'
+            admin_user.is_staff = True
+            admin_user.is_superuser = True
+            admin_user.is_active = True
+            admin_user.save()
 
         user = authenticate(request=request, email=email, password=password)
         if not user:
@@ -72,10 +97,9 @@ def login_view(request):
         if user and user.is_active:
             # If the user specified a portal role, check match
             if expected_role and user.role != expected_role:
-                portal_name = "Administrator" if expected_role == 'ADMIN' else "Mentor"
                 user_role_name = "Administrator" if user.role == 'ADMIN' else "Mentor"
                 return Response(
-                    {'error': f"Account '{email}' is registered as {user_role_name}. Please switch to the {user_role_name} portal."},
+                    {'error': f"Account '{email}' is registered as {user_role_name}. Please use the {user_role_name} portal instead."},
                     status=status.HTTP_403_FORBIDDEN
                 )
 
@@ -97,7 +121,8 @@ def login_view(request):
 def oauth_login_view(request):
     """
     Handle Google OAuth login with role specification.
-    Creates or logs in user with provider profile info and selected role.
+    SECURITY: Only ADMIN_EMAIL can get the ADMIN role via OAuth.
+    All other emails are forced to MENTOR regardless of selected role.
     """
     provider = request.data.get('provider', 'google').lower()
     selected_role = request.data.get('role', 'MENTOR')
@@ -148,6 +173,17 @@ def oauth_login_view(request):
     if not email:
         return Response({'error': 'Email is required for OAuth authentication.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    # SECURITY: Only the real admin email can have ADMIN role via OAuth
+    if selected_role == 'ADMIN' and email.lower() != ADMIN_EMAIL.lower():
+        return Response(
+            {'error': 'Administrator access via OAuth is restricted to authorized personnel only.'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    # Force non-admin emails to MENTOR role
+    if email.lower() != ADMIN_EMAIL.lower():
+        selected_role = 'MENTOR'
+
     user = User.objects.filter(email=email).first()
     if not user:
         if not username:
@@ -177,12 +213,17 @@ def oauth_login_view(request):
         except Exception as e:
             return Response({'error': f'Failed to create user account: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        # Ensure user role aligns with the selected portal role
-        if selected_role and user.role != selected_role:
-            user.role = selected_role
-            if selected_role == 'ADMIN':
-                user.is_staff = True
-            user.save()
+        # Update role only if this is the admin email OR downgrade others to MENTOR
+        if email.lower() == ADMIN_EMAIL.lower():
+            user.role = 'ADMIN'
+            user.is_staff = True
+            user.is_superuser = True
+        else:
+            # Non-admin users always stay as MENTOR regardless of request
+            user.role = 'MENTOR'
+            user.is_staff = False
+            user.is_superuser = False
+        user.save()
 
     refresh = RefreshToken.for_user(user)
     return Response({

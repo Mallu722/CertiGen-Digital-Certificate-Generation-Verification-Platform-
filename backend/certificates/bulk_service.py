@@ -18,6 +18,8 @@ def send_certificate_email(certificate, pdf_bytes: bytes, base_url="http://local
     """
     subject = f"Official Certificate Awarded: {certificate.title} ({certificate.certificate_number})"
     verify_url = f"{base_url.rstrip('/')}/verify/{certificate.certificate_number}"
+    download_url = f"{base_url.rstrip('/')}/api/certificates/{certificate.id}/download/"
+    issue_date_str = certificate.created_at.strftime('%B %d, %Y') if certificate.created_at else 'Official Record'
     
     body = f"""Dear {certificate.recipient_name},
 
@@ -27,7 +29,7 @@ Certificate Title: {certificate.title}
 Achievement: {certificate.achievement or 'Distinction & Outstanding Performance'}
 Serial ID: {certificate.certificate_number}
 Issuing Organization: {certificate.organization_name}
-Date of Issue: {certificate.created_at.strftime('%B %d, %Y') if certificate.created_at else 'Official Record'}
+Date of Issue: {issue_date_str}
 
 Your high-resolution vector certificate is attached to this email as a PDF.
 
@@ -44,6 +46,87 @@ Authorized Signatory:
 CertiGen Digital Certificate Verification Authority
 """
 
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }}
+        .card {{ max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
+        .header {{ background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); padding: 32px 24px; text-align: center; color: #ffffff; }}
+        .header h1 {{ margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }}
+        .badge {{ display: inline-block; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; }}
+        .content {{ padding: 32px 28px; }}
+        .recipient-box {{ background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin: 20px 0; text-align: center; }}
+        .recipient-name {{ font-size: 20px; font-weight: 800; color: #15803d; margin: 0; }}
+        .cert-info {{ border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 16px 0; margin: 20px 0; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }}
+        .info-label {{ color: #64748b; font-weight: 600; }}
+        .info-value {{ color: #0f172a; font-weight: 700; font-family: monospace; }}
+        .button-group {{ text-align: center; margin: 28px 0 16px; }}
+        .btn {{ display: inline-block; background: #0284c7; color: #ffffff !important; padding: 12px 28px; font-size: 14px; font-weight: 700; text-decoration: none; border-radius: 10px; margin: 6px; box-shadow: 0 2px 6px rgba(2,132,199,0.3); }}
+        .btn-outline {{ background: #ffffff; color: #0284c7 !important; border: 2px solid #0284c7; }}
+        .footer {{ text-align: center; padding: 20px; font-size: 11px; color: #94a3b8; background: #f8fafc; border-top: 1px solid #e2e8f0; }}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h1>Official Digital Credential</h1>
+          <div class="badge">Verified by CertiGen Ledger</div>
+        </div>
+        <div class="content">
+          <p style="font-size: 15px; margin-top: 0;">Dear <strong>{certificate.recipient_name}</strong>,</p>
+          <p style="font-size: 14px; line-height: 1.6; color: #475569;">
+            Congratulations! You have been awarded the following digital certificate with verifiable cryptographic ledger status. Your high-resolution vector PDF is <strong>attached to this email</strong>.
+          </p>
+          
+          <div class="recipient-box">
+            <div style="font-size: 11px; color: #166534; font-weight: 700; text-transform: uppercase;">Awarded To</div>
+            <div class="recipient-name">{certificate.recipient_name}</div>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Title:</td>
+              <td style="padding: 8px 0; color: #0f172a; font-weight: 700; text-align: right;">{certificate.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Serial ID:</td>
+              <td style="padding: 8px 0; color: #0284c7; font-weight: 700; font-family: monospace; text-align: right;">{certificate.certificate_number}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Organization:</td>
+              <td style="padding: 8px 0; color: #0f172a; font-weight: 700; text-align: right;">{certificate.organization_name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Issue Date:</td>
+              <td style="padding: 8px 0; color: #0f172a; font-weight: 700; text-align: right;">{issue_date_str}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Signatory:</td>
+              <td style="padding: 8px 0; color: #0f172a; font-weight: 700; text-align: right;">{certificate.signatory_name} ({certificate.signatory_title})</td>
+            </tr>
+          </table>
+
+          <div class="button-group">
+            <a href="{verify_url}" class="btn" target="_blank">Verify on CertiGen Ledger</a>
+          </div>
+
+          <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 16px;">
+            📎 <em>Your vector certificate PDF is attached below for your records and high-quality printing.</em>
+          </p>
+        </div>
+        <div class="footer">
+          &copy; 2026 CertiGen Digital Credential Authority. All rights reserved.<br>
+          Tamper-Proof Verification & Cryptographic Ledger.
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
     try:
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'CertiGen <no-reply@certigen.io>')
         email = EmailMessage(
@@ -52,6 +135,9 @@ CertiGen Digital Certificate Verification Authority
             from_email=from_email,
             to=[certificate.recipient_email],
         )
+        email.content_subtype = "html"
+        email.body = html_content
+        
         safe_name = re.sub(r'[^a-zA-Z0-9_\-]', '_', certificate.recipient_name)
         filename = f"{certificate.certificate_number}_{safe_name}.pdf"
         email.attach(filename, pdf_bytes, 'application/pdf')
@@ -59,6 +145,7 @@ CertiGen Digital Certificate Verification Authority
         return True, None
     except Exception as e:
         return False, str(e)
+
 
 
 def parse_recipients_file(file_obj, filename: str) -> list[dict]:

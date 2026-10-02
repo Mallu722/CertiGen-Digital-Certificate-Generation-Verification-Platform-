@@ -2082,6 +2082,12 @@ export function CertificatesCreatePage() {
               <p className="text-xs text-slate-500 mt-1">
                 Issued to <strong>{createdCertificate.recipient_name}</strong> for {createdCertificate.title}.
               </p>
+              {createdCertificate.recipient_email && (
+                <div className="mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-50 border border-sky-200 text-sky-800 text-xs font-semibold shadow-xs">
+                  <Mail className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Email sent with PDF to: <strong className="font-mono text-sky-950">{createdCertificate.recipient_email}</strong></span>
+                </div>
+              )}
             </div>
 
             {/* Certificate ID Card */}
